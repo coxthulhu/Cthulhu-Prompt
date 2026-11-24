@@ -114,7 +114,10 @@ describe('Prompt Collection Order', () => {
     /** Real UI actions must persist through clearing the main and renderer caches. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    expect(await readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual(COMBINED_ALPHABETICAL_IDS)
+    /** Both workspaces append a distinct routine starter to their original order. */
+    const originalOrder = [...COMBINED_ALPHABETICAL_IDS, (await findCollection(electronApp, 'MyRoutines', 'routine'))!.id]
+    const otherOrder = [...COMBINED_ALPHABETICAL_IDS].reverse()
+    expect(await readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual(originalOrder)
     for (const orderKind of ['prompt', 'template'] as const) {
       expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath, orderKind))).toBe(false)
     }
@@ -126,14 +129,14 @@ describe('Prompt Collection Order', () => {
     await mainWindow.getByTestId('rename-prompt-collection-name-input').fill('Zzz Renamed')
     await mainWindow.getByTestId('rename-prompt-collection-button').click()
     await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Zzz Renamed')
-    expect(await readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual(COMBINED_ALPHABETICAL_IDS)
+    expect(await readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual(originalOrder)
 
     await showCollectionBrowser(mainWindow)
     await openCollectionCreation(mainWindow, 'template')
     await mainWindow.getByTestId('create-prompt-collection-name-input').fill('New Collection')
     await mainWindow.getByTestId('create-prompt-collection-button').click()
     await expect.poll(() => readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual([
-      expect.any(String), ...COMBINED_ALPHABETICAL_IDS
+      expect.any(String), ...originalOrder
     ])
     /** Captured stable IDs must survive opening a workspace with conflicting orders. */
     const savedIds = await readWorkspacePromptCollectionIds(electronApp, workspacePath)
@@ -142,12 +145,13 @@ describe('Prompt Collection Order', () => {
       await testHelpers.clearWorkspaceViaUI()
       testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(path))
       await testHelpers.setupWorkspaceViaUI()
-        await expect.poll(() => readPromptCollectionDropdownItemTestIds(mainWindow)).toEqual(
-        (path === otherPath ? [...COMBINED_ALPHABETICAL_IDS].reverse() : savedIds).map((id) => `${PROMPT_COLLECTION_DROPDOWN_ITEM_PREFIX}${id}`)
+      if (path === otherPath) otherOrder.push((await findCollection(electronApp, 'MyRoutines', 'routine'))!.id)
+      await expect.poll(() => readPromptCollectionDropdownItemTestIds(mainWindow)).toEqual(
+        (path === otherPath ? otherOrder : savedIds).map((id) => `${PROMPT_COLLECTION_DROPDOWN_ITEM_PREFIX}${id}`)
       )
       await mainWindow.keyboard.press('Escape')
     }
-    expect(await readWorkspacePromptCollectionIds(electronApp, otherPath)).toEqual([...COMBINED_ALPHABETICAL_IDS].reverse())
+    expect(await readWorkspacePromptCollectionIds(electronApp, otherPath)).toEqual(otherOrder)
     for (const orderKind of ['prompt', 'template'] as const) {
       expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath, orderKind))).toBe(false)
     }
@@ -169,14 +173,14 @@ describe('Prompt Collection Order', () => {
     await mainWindow.getByTestId('create-prompt-collection-name-input').fill('Retry Collection')
     await mainWindow.getByTestId('create-prompt-collection-button').click()
     await expect(mainWindow.getByTestId('create-prompt-collection-name-error')).toBeVisible()
-    expect(await readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual(COMBINED_ALPHABETICAL_IDS)
+    expect(await readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual([...COMBINED_ALPHABETICAL_IDS, (await findCollection(electronApp, 'MyRoutines', 'routine'))!.id])
     expect(await findCollection(electronApp, 'RetryCollection').then(Boolean)).toBe(false)
     await runSqlStatement(electronApp, 'DROP TRIGGER reject_collection_order')
     await mainWindow.getByTestId('create-prompt-collection-button').click()
     await testHelpers.navigateToPromptCollections('Retry Collection')
     await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Retry Collection')
     await expect.poll(() => readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual([
-      expect.any(String), ...COMBINED_ALPHABETICAL_IDS
+      expect.any(String), ...COMBINED_ALPHABETICAL_IDS, expect.stringMatching(/^[a-f0-9]{32}$/)
     ])
     expect(await findCollection(electronApp, 'RetryCollection').then(Boolean)).toBe(true)
     expect(testSetup.getRendererErrors().some((error) => error.message.includes('Controlled collection order failure'))).toBe(true)
@@ -205,6 +209,8 @@ describe('Prompt Collection Order', () => {
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
+    /** The upgrade appends this project's routine collection to its original order. */
+    const routineId = (await findCollection(electronApp, 'MyRoutines', 'routine'))!.id
 
     await expect
       .poll(async () => await readPromptCollectionDropdownItemTestIds(mainWindow))
@@ -212,15 +218,16 @@ describe('Prompt Collection Order', () => {
         'new-tab-collection-collection-middle',
         'new-tab-collection-collection-zeta',
         'new-tab-collection-collection-alpha',
-        'new-tab-collection-collection-beta'
+        'new-tab-collection-collection-beta',
+        `new-tab-collection-${routineId}`
       ])
     await expect(
       await readWorkspacePromptCollectionIds(electronApp, COLLECTION_ORDER_WORKSPACE_PATH)
-    ).toEqual(['collection-middle', 'collection-zeta', 'collection-alpha', 'collection-beta'])
+    ).toEqual(['collection-middle', 'collection-zeta', 'collection-alpha', 'collection-beta', routineId])
     await expect(
       await readWorkspacePromptCollectionEntries(electronApp, COLLECTION_ORDER_WORKSPACE_PATH)
     ).toEqual(
-      ['collection-middle', 'collection-zeta', 'collection-alpha', 'collection-beta'].map((id) => ({
+      ['collection-middle', 'collection-zeta', 'collection-alpha', 'collection-beta', routineId].map((id) => ({
         kind: 'collection',
         id
       }))
@@ -245,12 +252,14 @@ describe('Prompt Collection Order', () => {
     })
 
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    /** The routine starter stays last while the original collections are rearranged. */
+    const routineId = (await findCollection(electronApp, 'MyRoutines', 'routine'))!.id
     await expect
       .poll(async () => await readWorkspacePromptCollectionIds(electronApp, COMBINED_REPAIR_WORKSPACE_PATH))
-      .toEqual(COMBINED_ALPHABETICAL_IDS)
+      .toEqual([...COMBINED_ALPHABETICAL_IDS, routineId])
     await expect
       .poll(async () => await readPromptCollectionDropdownItemTestIds(mainWindow))
-      .toEqual(COMBINED_ALPHABETICAL_IDS.map((id) => `${PROMPT_COLLECTION_DROPDOWN_ITEM_PREFIX}${id}`))
+      .toEqual([...COMBINED_ALPHABETICAL_IDS, routineId].map((id) => `${PROMPT_COLLECTION_DROPDOWN_ITEM_PREFIX}${id}`))
 
     // A template collection can move ahead of task collections in the shared order.
     await beginPromptCollectionDropdownDrag(mainWindow, 'template-beta')
@@ -259,7 +268,7 @@ describe('Prompt Collection Order', () => {
     await finishActiveDrag(mainWindow)
     await expect
       .poll(async () => await readWorkspacePromptCollectionIds(electronApp, COMBINED_REPAIR_WORKSPACE_PATH))
-      .toEqual(['template-beta', 'prompt-alpha', 'template-alpha', 'prompt-zulu'])
+      .toEqual(['template-beta', 'prompt-alpha', 'template-alpha', 'prompt-zulu', routineId])
   })
 
   test('adds new collections to the top of the persisted collection order', async ({
@@ -279,6 +288,8 @@ describe('Prompt Collection Order', () => {
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
+    /** The upgrade appends this project's routine collection to its original order. */
+    const routineId = (await findCollection(electronApp, 'MyRoutines', 'routine'))!.id
 
     await showCollectionBrowser(mainWindow)
     await openCollectionCreation(mainWindow)
@@ -290,13 +301,14 @@ describe('Prompt Collection Order', () => {
       .toEqual([
         expect.stringMatching(/^new-tab-collection-(?!collection-alpha|collection-beta)/),
         'new-tab-collection-collection-alpha',
-        'new-tab-collection-collection-beta'
+        'new-tab-collection-collection-beta',
+        `new-tab-collection-${routineId}`
       ])
     await expect
       .poll(
         async () => await readWorkspacePromptCollectionIds(electronApp, CREATE_COLLECTION_WORKSPACE_PATH)
       )
-      .toEqual([expect.not.stringMatching(/^collection-(alpha|beta)$/), 'collection-alpha', 'collection-beta'])
+      .toEqual([expect.not.stringMatching(/^collection-(alpha|beta)$/), 'collection-alpha', 'collection-beta', routineId])
   })
 
 

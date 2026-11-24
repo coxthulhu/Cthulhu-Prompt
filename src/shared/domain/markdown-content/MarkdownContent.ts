@@ -1,6 +1,7 @@
 import type { Draft } from 'immer'
 import type { DomainChange } from '@shared/domain/DomainChanges'
 import {
+  getCollectionContentKind,
   insertCategoryOrderEntry,
   removeCategoryOrderEntry,
   type CategoryOrder,
@@ -150,7 +151,7 @@ export const getCategoryContentIds = (
 ): string[] =>
   getMarkdownContentCategoryOrder(promptCollection, statusFolderId).categories
     .find((group) => group.categoryId === categoryId)
-    ?.entries.flatMap((entry) => (entry.kind === promptCollection.kind ? [entry.id] : [])) ?? []
+    ?.entries.flatMap((entry) => (entry.kind === getCollectionContentKind(promptCollection.kind) ? [entry.id] : [])) ?? []
 
 /** Returns prompt IDs owned by one exact status folder regardless of ordering behavior. */
 export const getPromptStatusFolderContentIds = (
@@ -161,7 +162,7 @@ export const getPromptStatusFolderContentIds = (
   const layout = promptCollection.statusFolders[statusFolderId]
   return layout.ordering === 'category'
     ? layout.categoryOrder.categories.flatMap((category) =>
-        category.entries.flatMap((entry) => (entry.kind === promptCollection.kind ? [entry.id] : []))
+        category.entries.flatMap((entry) => (entry.kind === getCollectionContentKind(promptCollection.kind) ? [entry.id] : []))
       )
     : [...layout.promptIds]
 }
@@ -169,9 +170,9 @@ export const getPromptStatusFolderContentIds = (
 /** Returns every content ID owned by one prompt or template collection. */
 export const getMarkdownContentIds = (
   promptCollection: PromptCollection,
-  kind: PromptCollectionContentKind
+  kind: PromptCollectionContentKind = getCollectionContentKind(promptCollection.kind)
 ): string[] => {
-  if (promptCollection.kind !== kind) return []
+  if (getCollectionContentKind(promptCollection.kind) !== kind) return []
   return Object.values(promptCollection.statusFolders).flatMap((layout) =>
     layout.ordering === 'category'
       ? layout.categoryOrder.categories.flatMap((category) =>

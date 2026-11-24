@@ -5,7 +5,7 @@
   import DropTarget from '@renderer/common/drag-drop/DropTarget.svelte'
   import SelectionIndicator from '@renderer/common/cthulhu-ui/forms/SelectionIndicator.svelte'
   import PromptStatusIndicator from '@renderer/features/prompt-editor/PromptStatusIndicator.svelte'
-  import type { PromptStatus } from '@shared/domain/prompt/Prompt'
+  import type { PromptContentStatus } from '@shared/domain/prompt/Prompt'
   import PromptTreeGutter from './PromptTreeGutter.svelte'
   import { collectionPromptTestId } from './promptTreeTestIds'
   import type { PromptRowDragOptions, PromptRowDropOptions } from './promptTreeRowOptions'
@@ -25,7 +25,7 @@
     collectionId: string
     promptId: string
     promptTitle: string
-    status?: PromptStatus
+    status?: PromptContentStatus
     // Whether this prompt has been edited during the current renderer session.
     isEdited?: boolean
     isActive: boolean

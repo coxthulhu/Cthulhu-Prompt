@@ -18,6 +18,7 @@ import {
 import { parseIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import { promptEntryRef, promptTemplateEntryRef } from '@shared/domain/OrderContainer'
 import {
+  getContentStatusFolderEntryStatus,
   getPromptStatusFolderDefinition,
   isPromptStatusFolderId,
   PROMPT_STATUS_FOLDER_REGISTRY,
@@ -27,6 +28,7 @@ import {
   type PromptTemplateReference
 } from '@shared/domain/prompt/Prompt'
 import {
+  collectionItemLabel,
   removeCategoryOrderEntry,
   type CategoryOrderEntryRef,
   type PromptCollectionContentKind
@@ -306,7 +308,8 @@ export const planCreatePromptDomainMutation: DomainPlanner<CreatePromptDomainCom
     { entityType: 'promptCollection', id: command.promptCollectionId },
     { entityType: 'prompt', id: command.contentId }
   ]
-  if (!promptCollection || promptCollection.kind !== 'prompt' || existingPrompt) {
+  if (!promptCollection || promptCollection.kind === 'template' || existingPrompt ||
+    (promptCollection.kind === 'routine' && command.statusFolderId !== PromptStatusFolderId.Active)) {
     return createConflict('Prompt creation conflict', targets)
   }
 
@@ -320,6 +323,7 @@ export const planCreatePromptDomainMutation: DomainPlanner<CreatePromptDomainCom
     lookupPrompt: (promptId) => state.get('prompt', promptId),
     promptId: command.contentId,
     currentFallbackTitle: command.fallbackTitle,
+    defaultFallbackTitle: `New ${collectionItemLabel[promptCollection.kind]}`,
     nextTitle: command.title
   })
   /** Initial prompt data before category placement synchronization. */
@@ -329,8 +333,8 @@ export const planCreatePromptDomainMutation: DomainPlanner<CreatePromptDomainCom
     createdAt: command.createdAt,
     modifiedAt: command.createdAt,
     promptText: command.promptText,
-    ...(command.templates !== undefined ? { templates: command.templates } : {}),
-    status: PROMPT_STATUS_FOLDER_REGISTRY[command.statusFolderId].entryStatus
+    ...(command.templates !== undefined || promptCollection.kind === 'routine' ? { templates: command.templates ?? null } : {}),
+    status: getContentStatusFolderEntryStatus(promptCollection.kind, command.statusFolderId)
   }
 
   /** Destination layout resolved from the creation group. */
@@ -352,11 +356,9 @@ export const planCreatePromptDomainMutation: DomainPlanner<CreatePromptDomainCom
         entityType: 'promptCollection',
         id: command.promptCollectionId,
         recipe: (draft) => {
-          if (draft.kind === 'prompt') {
-            /** Ordered draft layout receiving the created prompt. */
-            const draftLayout = draft.statusFolders[command.statusFolderId]
-            if (draftLayout.ordering === 'category') draftLayout.categoryOrder = placement.categoryOrder
-          }
+          /** Ordered draft layout receiving the created prompt. */
+          const draftLayout = draft.statusFolders[command.statusFolderId]
+          if (draftLayout.ordering === 'category') draftLayout.categoryOrder = placement.categoryOrder
         }
       },
       {
@@ -483,7 +485,7 @@ const findMarkdownContentOwner = (
     .getAll('promptCollection')
     .find(
       (collection) =>
-        collection.kind === kind && getMarkdownContentIds(collection, kind).includes(contentId)
+        getMarkdownContentIds(collection, kind).includes(contentId)
     )
 
 /** Creates a prompt- or template-specific shared deletion planner. */
@@ -512,7 +514,6 @@ const createDeletePlanner = (
   ]
   if (
     !promptCollection ||
-    promptCollection.kind !== kind ||
     !content ||
     !getMarkdownContentIds(promptCollection, kind).includes(command.contentId) ||
     !workspace ||
@@ -575,16 +576,11 @@ export const planPromptUpdate: DomainPlanner<UpdatePromptDomainCommand> = (
   }
   /** Collision-free title fields resolved against authoritative sibling state. */
   const titleFields = resolvePromptTitleUpdateForPromptIds({
-    promptIds:
-      owner.kind === 'prompt'
-        ? getPromptStatusFolderContentIds(
-            owner,
-            getPromptStatusFolderDefinition(prompt.status).id
-          )
-        : [],
+    promptIds: getPromptStatusFolderContentIds(owner, getPromptStatusFolderDefinition(prompt.status).id),
     lookupPrompt: (promptId) => state.get('prompt', promptId),
     promptId: command.contentId,
     currentTitle: prompt.title,
+    defaultFallbackTitle: `New ${collectionItemLabel[owner.kind]}`,
     currentFallbackTitle: command.fallbackTitle,
     nextTitle: command.title
   })

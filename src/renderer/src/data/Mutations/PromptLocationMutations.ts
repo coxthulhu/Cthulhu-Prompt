@@ -14,7 +14,7 @@ export const getPromptLocation = (promptCollectionId: string, promptId: string):
   /** Loaded collection identifies the prompt or template collection. */
   const collection = promptCollectionsCollection.get(promptCollectionId)!
   /** Canonical content includes the exact status, including In Progress within Active. */
-  const prompt = (collection.kind === 'prompt' ? promptsCollection : promptTemplatesCollection).get(promptId)!
+  const prompt = (collection.kind === 'template' ? promptTemplatesCollection : promptsCollection).get(promptId)!
   /** Physical layout owning this prompt's ordering. */
   const layout = collection.statusFolders[getPromptStatusFolderDefinition(prompt.status ?? (collection.kind === 'template' ? PromptTemplateStatus.Active : PromptStatus.Todo)).id]
   /** Current category order is authoritative for manually ordered locations. */
@@ -65,7 +65,7 @@ export const setPromptLocation = async (sourcePromptCollectionId: string, prompt
     ipc: { channel: 'set-prompt-location' },
     renderer: {
       mutate: ({ collections }) => {
-        if (source.kind === 'prompt') {
+        if (source.kind !== 'template') {
           collections.promptClientState.update(promptId, markPromptClientStateEdited)
         } else if (current.status === location.status) {
           collections.promptTemplateClientState.update(promptId, markPromptTemplateClientStateEdited)

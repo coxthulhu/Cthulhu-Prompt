@@ -15,7 +15,8 @@ export const saveProjects = async (workspaceId: string, projects: ProjectInfo[])
   const command: SaveProjectsCommand = { workspaceId, projects: projects.map((project) => ({
     project: getProjectInfo(project),
     starterCollections: workspace.projects.some((existing) => existing.id === project.id) ? null : {
-      promptCollectionId: compactGuid(crypto.randomUUID()), templateCollectionId: compactGuid(crypto.randomUUID())
+      promptCollectionId: compactGuid(crypto.randomUUID()), templateCollectionId: compactGuid(crypto.randomUUID()),
+      routineCollectionId: compactGuid(crypto.randomUUID())
     }
   })) }
   await runImmediateRendererDomainMutation({ mutation: { command, plan: planSaveProjects }, ipc: { channel: 'save-projects' }, renderer: {

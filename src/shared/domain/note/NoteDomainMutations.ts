@@ -96,7 +96,7 @@ const findCollection = (state: DomainState, noteId: string) => {
   /** Attached owner, when the note has not been detached. */
   const attachment = findNoteOwner(state, noteId)
   return state.getAll('promptCollection').find((collection) => attachment
-    ? getMarkdownContentIds(collection, collection.kind).includes(attachment.owner.id)
+    ? getMarkdownContentIds(collection).includes(attachment.owner.id)
     : getStandaloneNoteIds(collection).includes(noteId))
 }
 
@@ -130,7 +130,7 @@ export const planCreateAttachedNote: DomainPlanner<CreateAttachedNoteCommand> = 
   if (!owner || owner.attachedNoteId || state.get('note', command.noteId)) return { status: 'conflict', reason: 'Note attachment conflict', targets }
   /** Resolve the preference's workspace from the owner's authoritative membership. */
   const collection = state.getAll('promptCollection').find((candidate) =>
-    candidate.kind === command.ownerKind && getMarkdownContentIds(candidate, candidate.kind).includes(owner.id))
+    getMarkdownContentIds(candidate, command.ownerKind).includes(owner.id))
   const workspace = collection && state.getAll('workspace').find((candidate) =>
     getWorkspaceCollectionEntries(candidate).some((entry) => entry.id === collection.id))
   if (!workspace) return { status: 'conflict', reason: 'Note attachment workspace missing', targets }

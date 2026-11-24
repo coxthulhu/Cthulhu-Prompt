@@ -3,7 +3,7 @@
   import IconButtonBar from '@renderer/common/cthulhu-ui/buttons/IconButtonBar.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
-  import type { PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
+  import type { PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
   import EditorCardSurface from '../prompt-editor/EditorCardSurface.svelte'
   import EditorMetadataRow from '../prompt-editor/EditorMetadataRow.svelte'
   import type { DraggableOptions } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
@@ -19,7 +19,7 @@
     categoryId: string
     displayName: string
     contentCount: number
-    contentKind: PromptCollectionContentKind
+    contentKind: PromptCollectionKind
     rowHeightPx: number
     isContentSectionExpanded: boolean
     isReadOnly?: boolean
@@ -47,7 +47,7 @@
   }: Props = $props()
 
   /** Singular content label used by category metadata and controls. */
-  const contentName = $derived(contentKind === 'template' ? 'template' : 'prompt')
+  const contentName = $derived(contentKind)
   /** Human-readable category content count. */
   const contentCountLabel = $derived(
     `${contentCount} ${contentCount === 1 ? contentName : `${contentName}s`}`

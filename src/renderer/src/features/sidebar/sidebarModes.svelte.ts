@@ -105,7 +105,7 @@ export class CollectionSidebarModeData {
 
   /** Displays a status destination and expands its sidebar section without disturbing its saved height. */
   setScreenMode = (nextMode: PromptCollectionScreenMode): void => {
-    if (promptCollectionsCollection.get(this.collectionId ?? '')?.kind === 'template' && nextMode !== 'active' && nextMode !== 'archived') return
+    if (promptCollectionsCollection.get(this.collectionId ?? '')?.kind !== 'prompt' && nextMode !== 'active' && nextMode !== 'archived') return
     if (this.openPromptId) this.closeOpenPrompt()
     if (PROMPT_STATUS_FOLDER_REGISTRY[nextMode].ordering === 'finalizedAt') this.shownFinalStatusGroups[nextMode] = true
     this.view.selectedMode = nextMode

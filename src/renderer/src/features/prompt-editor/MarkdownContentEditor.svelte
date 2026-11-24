@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { getCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
+  import { Repeat } from 'lucide-svelte'
   import { onMount, tick } from 'svelte'
   import AttachedNoteButton from './AttachedNoteButton.svelte'
   import AttachedNoteSection from './AttachedNoteSection.svelte'
@@ -142,7 +144,7 @@
       templateState?: 'not-selected' | 'no-template' | 'selected'
       isEdited: boolean
     }
-    contentKind?: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionContentKind
+    contentKind?: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionKind
     contentLabel?: string
     metadataTemplateLabel?: string | null
     metadataTemplateState?: 'not-selected' | 'no-template' | 'selected'
@@ -302,7 +304,7 @@
         const noteId = compactGuid(window.crypto.randomUUID())
         focusNewNoteId = noteId
         try {
-          await createAttachedNote(contentKind, promptId, noteId)
+          await createAttachedNote(getCollectionContentKind(contentKind), promptId, noteId)
         } catch (error) {
           if (focusNewNoteId === noteId) focusNewNoteId = null
           throw error
@@ -722,6 +724,7 @@
 <!-- Title, metadata, status accent, and toolbar shared by both layouts. -->
 {#snippet titleArea()}
   <PromptEditorTitleArea
+    icon={contentKind === 'routine' ? Repeat : undefined}
     {findRequest}
     title={promptData.draft.title}
     draftText={promptData.draft.text}

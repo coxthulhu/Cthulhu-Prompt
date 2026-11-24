@@ -11,7 +11,7 @@ export type PromptDragStatusSection = `${PromptStatusFolderId}`
 export type PromptHandleDragPayload = {
   fromId: string
   location: PromptLocation
-  contentKind: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionContentKind
+  contentKind: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionKind
 }
 
 /** Drag payload for reordering one category. */

@@ -1,8 +1,8 @@
 import { rmSync } from 'node:fs'
 import { collectionEntryRef } from '@shared/domain/OrderContainer'
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
-import { createPromptStatusFolderLayouts, type PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
-import { emptyContents, listWorkspacePaths, publishWorkspace } from '../Persistence/sqlite/WorkspaceDatabase'
+import { createStarterCollection, STARTER_COLLECTION_KINDS } from '@shared/domain/prompt-collection/PromptCollection'
+import { emptyContents, listWorkspacePaths, publishWorkspace, saveWorkspaceOrder } from '../Persistence/sqlite/WorkspaceDatabase'
 import { UserPersistenceDataAccess } from '../Persistence/sqlite/UserPersistenceDataAccess'
 import type { UserPersistence } from '@shared/domain/user-persistence/UserPersistence'
 import { SqliteDataAccess } from '../Persistence/sqlite/SqliteDataAccess'
@@ -12,6 +12,7 @@ import { compactGuid } from '@shared/utilities/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import { promptEntryRef, promptTemplateEntryRef } from '@shared/domain/OrderContainer'
+import changelogRoutineSource from '../BundledPrompts/UpdateChangelog.md?raw'
 import example1PromptSource from '../BundledPrompts/Example1.md?raw'
 import example2PromptSource from '../BundledPrompts/Example2.md?raw'
 import example3PromptSource from '../BundledPrompts/Example3.md?raw'
@@ -50,24 +51,27 @@ const BUNDLED_TEMPLATE_SOURCES: Array<{
 /** Allocates a domain identity shared by workspace content and local session state. */
 const newId = (): string => compactGuid(randomUUID())
 
-/** Seeds both starter collections, optional examples, and the initial two-tab session. */
+/** Seeds the project's starter collections, optional examples, and initial work tabs. */
 export const createWorkspace = (workspaceName: string, examples: boolean, firstLaunch?: UserPersistence) => {
   /** Build the initial shared records together before publishing the file. */
   const source = emptyContents(newId(), workspaceName)
   /** Give all bundled content the same creation and modification time. */
   const now = getCurrentIsoSecondTimestamp()
-  /** Both starter libraries exist even when examples are disabled. */
-  const collections = (['prompt', 'template'] as const).map((kind): PromptCollection => ({
-    id: newId(), kind, displayName: kind === 'prompt' ? 'My Prompts' : 'My Templates',
-    folderName: kind === 'prompt' ? 'MyPrompts' : 'MyTemplates',
-    settings: { collectionDescription: null }, statusFolders: createPromptStatusFolderLayouts()
-  }))
-  /** Populate each library with the corresponding example content. */
-  const [prompts, templates] = collections
+  /** Starter libraries and tabs use the same order. */
+  const collections = STARTER_COLLECTION_KINDS.map((kind) => createStarterCollection(newId(), kind))
+  /** Each library receives its own example content. */
+  const [prompts, templates, routines] = collections
   source.promptCollection = collections
   source.projects.push({ id: newId(), name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
     collectionEntries: collections.map((collection) => collectionEntryRef(collection.id)) })
   if (examples) {
+    /** The bundled routine can be copied immediately without picking a template. */
+    const changelog = parseMarkdownFrontmatter(changelogRoutineSource)
+    /** The prompt record and its position share this identity. */
+    const routineId = newId()
+    source.prompt.push({ id: routineId, title: changelog.data.title, fallbackTitle: '', promptText: changelog.content.trimEnd(),
+      templates: null, status: PromptTemplateStatus.Active, createdAt: now, modifiedAt: now })
+    routines.statusFolders.active.categoryOrder.categories[0].entries.push(promptEntryRef(routineId))
     /** Resolve bundled template keys to this workspace’s newly allocated IDs. */
     const templateIds = new Map<BundledTemplateKey, string>()
     for (const bundled of BUNDLED_TEMPLATE_SOURCES) {
@@ -108,6 +112,7 @@ export const createWorkspace = (workspaceName: string, examples: boolean, firstL
   const path = publishWorkspace(source)
   try {
     SqliteDataAccess.runTransaction(() => {
+      saveWorkspaceOrder(source)
       writeTabSession({ ...createDefaultWorkspaceUiState(source.id), tabs, selectedTabId: tabs[0].id })
       if (firstLaunch) UserPersistenceDataAccess.updateUserPersistence({ ...firstLaunch, lastWorkspaceInfoPath: path })
     })

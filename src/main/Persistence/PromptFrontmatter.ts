@@ -3,7 +3,6 @@ import { parseMarkdownFrontmatter, serializeMarkdownFrontmatter } from './Markdo
 import {
   isFinalPromptStatus,
   isPromptStatus,
-  PromptStatus,
   type PromptContentStatus,
   type PromptPersisted,
   type PromptTemplateReference
@@ -15,7 +14,7 @@ type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'attachedNoteId' | 'cr
   { templates?: PromptTemplateReference[] | null } &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string }) &
   {
-    status: PromptStatus
+    status: PromptContentStatus
     finalizedAt?: string
   }
 
@@ -62,7 +61,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
     return false
   }
 
-  if (!isPromptStatus(frontmatter.status)) return false
+  if (!isPromptStatus(frontmatter.status) && frontmatter.status !== PromptTemplateStatus.Active) return false
   const hasFinalStatus = isFinalPromptStatus(frontmatter.status)
   if (hasFinalStatus !== hasFinalizedAt) return false
 

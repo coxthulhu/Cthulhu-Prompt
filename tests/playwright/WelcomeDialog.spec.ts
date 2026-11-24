@@ -54,7 +54,7 @@ describe('Welcome Dialog', () => {
     expect((await readUserPersistence(electronApp)).lastWorkspaceInfoPath).toBe(join(profile, 'Workspaces', 'DefaultWorkspace.cthulhuprompt'))
     await welcome.getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect(welcome).toHaveCount(0)
-    await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates'])
+    await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates', 'My Routines'])
     await expect(mainWindow.getByRole('tab', { name: 'My Prompts', exact: true })).toHaveAttribute('aria-selected', 'true')
     await expect(mainWindow.getByTestId('prompt-title')).toHaveCount(3)
     await mainWindow.getByTestId('prompt-title').first().fill('My first edit')
@@ -137,7 +137,7 @@ describe('Welcome Dialog', () => {
   })
 
   test('opens My Prompts from Home and reopens its collection when the tab was closed', async ({ testSetup }) => {
-    /** New users start with both starter collections open. */
+    /** New users start with all three starter collections open. */
     const { mainWindow } = await testSetup.setupAndStart({ firstLaunch: true })
     /** Primary action reused on first launch and when reopened from Home. */
     const open = mainWindow.getByRole('button', { name: 'Open My Prompts', exact: true })
@@ -147,14 +147,14 @@ describe('Welcome Dialog', () => {
     await mainWindow.getByTestId('nav-button-home').click()
     await mainWindow.getByTestId('show-welcome-button').click()
     await open.click()
-    await expect(tabs).toHaveText(['My Prompts', 'My Templates'])
+    await expect(tabs).toHaveText(['My Prompts', 'My Templates', 'My Routines'])
     await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
     await mainWindow.getByTestId('work-tab-close').first().press('Enter')
-    await expect(tabs).toHaveText(['My Templates'])
+    await expect(tabs).toHaveText(['My Templates', 'My Routines'])
     await mainWindow.getByTestId('nav-button-home').click()
     await mainWindow.getByTestId('show-welcome-button').click()
     await open.click()
-    await expect(tabs).toHaveText(['My Templates', 'My Prompts'])
+    await expect(tabs).toHaveText(['My Templates', 'My Routines', 'My Prompts'])
     await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
   })
 

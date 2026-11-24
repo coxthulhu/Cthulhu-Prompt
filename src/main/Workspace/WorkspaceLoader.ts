@@ -141,7 +141,7 @@ const buildWorkspaceLoadPayloadFromData = async (workspaceId: string, requestedP
       if (!loadedPromptCollectionIds.includes(id)) removeCollectionFromTabSession(session, id)
     }
     for (const { data: collection } of promptCollections) {
-      pruneCollectionTabViews(session, collection.id, getPromptCollectionCategoryIds(collection), getMarkdownContentIds(collection, collection.kind), notes.map((note) => note.id))
+      pruneCollectionTabViews(session, collection.id, getPromptCollectionCategoryIds(collection), getMarkdownContentIds(collection), notes.map((note) => note.id))
     }
     writeTabSession(session)
   }

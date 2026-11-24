@@ -8,7 +8,7 @@ import {
 } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
 import type { DomainPlanner } from '@shared/domain/DomainChanges'
 import { type MarkdownContentPersisted } from '@shared/domain/markdown-content/MarkdownContent'
-import { type PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
+import { getCollectionContentKind, type PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
 import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 import {
@@ -83,7 +83,7 @@ export const createMarkdownContentRendererMutations = <
   ): Promise<void> => {
     /** collection that owns the new content and category order. */
     const promptCollection = promptCollectionsCollection.get(promptCollectionId)
-    if (!promptCollection || promptCollection.kind !== config.kind) {
+    if (!promptCollection || getCollectionContentKind(promptCollection.kind) !== config.kind) {
       throw new Error(`${config.label} collection not loaded`)
     }
     /** Shared content-creation command projected in both processes. */
@@ -144,7 +144,7 @@ export const createMarkdownContentRendererMutations = <
     const promptCollection = promptCollectionsCollection.get(promptCollectionId)
     /** Full persisted content selected for deletion. */
     const content = config.getFullPersisted(contentId)
-    if (!promptCollection || promptCollection.kind !== config.kind || !content) {
+    if (!promptCollection || getCollectionContentKind(promptCollection.kind) !== config.kind || !content) {
       throw new Error(`${config.label} not loaded`)
     }
     /** Workspace that owns the deleted content's collection. */

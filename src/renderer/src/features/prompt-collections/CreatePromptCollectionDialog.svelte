@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FileText, Layers } from 'lucide-svelte'
+  import { collectionIcons } from '@renderer/features/prompt-collections/collectionIcons'
   import OptionCardSelector, {
     type OptionCardSelectorItem
   } from '@renderer/common/cthulhu-ui/selectors/OptionCardSelector.svelte'
@@ -40,7 +40,7 @@
         "Mark it complete when it's done",
         'Apply a template to guide the work'
       ],
-      icon: FileText,
+      icon: collectionIcons.prompt,
       testId: 'create-prompt-collection-type-prompt'
     },
     {
@@ -52,8 +52,20 @@
         'Lists steps for the AI to follow',
         'Sets response rules, like "be concise"'
       ],
-      icon: Layers,
+      icon: collectionIcons.template,
       testId: 'create-prompt-collection-type-template'
+    },
+    {
+      id: 'routine',
+      label: 'Routine Collection',
+      bullets: [
+        'Save work you do repeatedly',
+        'Copy a routine whenever you need it',
+        'Apply a template to guide the work',
+        'Archive it when you stop using it'
+      ],
+      icon: collectionIcons.routine,
+      testId: 'create-prompt-collection-type-routine'
     }
   ]
 
@@ -104,7 +116,7 @@
   inputTestId="create-prompt-collection-name-input"
   errorTestId="create-prompt-collection-name-error"
   failureMessage="Failed to create collection. Please try again."
-  class="max-w-[660px]"
+  class="max-w-[960px]"
   onsubmit={handleCreateCollection}
 >
   {#snippet trailingFields()}

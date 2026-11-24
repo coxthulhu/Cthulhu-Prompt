@@ -1,4 +1,5 @@
 import { getPromptStatusFolderDefinition } from '@shared/domain/prompt/Prompt'
+import { collectionItemLabel } from '@shared/domain/prompt-collection/PromptCollection'
 import { getPromptStatusFolderContentIds } from '@shared/domain/markdown-content/MarkdownContent'
 import type { PromptFull, PromptPersisted, PromptTemplateReference } from '@shared/domain/prompt/Prompt'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
@@ -20,17 +21,17 @@ type PromptOptimisticMutationOptions = {
 /** Returns the timestamp applied to one prompt edit. */
 const getPromptModifiedAt = (): string => getCurrentIsoSecondTimestamp()
 
-/** Returns same-group sibling prompt IDs used to resolve fallback-title collisions. */
-const getPromptIdsForPrompt = (promptId: string): string[] => {
+/** Finds sibling IDs and the owning workflow's fallback title for an optimistic rename. */
+const getPromptTitleContext = (promptId: string) => {
   for (const promptCollection of promptCollectionsCollection.values()) {
-    if (promptCollection.kind !== 'prompt') continue
+    if (promptCollection.kind === 'template') continue
     /** Siblings in the edited prompt's exact status group. */
     const promptIds = getPromptStatusFolderContentIds(
       promptCollection, getPromptStatusFolderDefinition(promptsCollection.get(promptId)!.status).id
     )
-    if (promptIds.includes(promptId)) return promptIds
+    if (promptIds.includes(promptId)) return { promptIds, defaultFallbackTitle: `New ${collectionItemLabel[promptCollection.kind]}` }
   }
-  return [promptId]
+  return { promptIds: [promptId] }
 }
 
 /** Schedules one authoritative prompt edit and latches its client-state marker. */
@@ -54,7 +55,7 @@ export const setPromptTitle = (promptId: string, title: string): void => {
   /** Canonical prompt receiving the title edit. */
   const prompt = promptsCollection.get(promptId)!
   const nextTitleFields = resolvePromptTitleUpdateForPromptIds({
-    promptIds: getPromptIdsForPrompt(promptId),
+    ...getPromptTitleContext(promptId),
     lookupPrompt: (currentPromptId) => promptsCollection.get(currentPromptId),
     promptId,
     currentTitle: prompt.title,

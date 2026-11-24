@@ -83,7 +83,7 @@ export const parseCreatePromptCollectionDomainCommand = (
     typeof record.promptCollectionId !== 'string' ||
     typeof record.displayName !== 'string' ||
     (record.previousEntryId !== null && typeof record.previousEntryId !== 'string') ||
-    (record.kind !== 'prompt' && record.kind !== 'template')
+    (record.kind !== 'prompt' && record.kind !== 'template' && record.kind !== 'routine')
   ) {
     return null
   }
@@ -177,24 +177,14 @@ export const planCreatePromptCollectionDomainMutation: DomainPlanner<
   }
 
   /** Initial collection entity inserted by both renderer and main projections. */
-  const promptCollection: PromptCollection =
-    command.kind === 'prompt'
-      ? {
-          id: command.promptCollectionId,
-          kind: 'prompt',
-          folderName: preparedName.folderName,
-          displayName: preparedName.displayName,
-          statusFolders: createPromptStatusFolderLayouts(),
-          settings: createEmptyPromptCollectionSettings()
-        }
-      : {
-          id: command.promptCollectionId,
-          kind: 'template',
-          folderName: preparedName.folderName,
-          displayName: preparedName.displayName,
-          statusFolders: createPromptStatusFolderLayouts(),
-          settings: createEmptyPromptCollectionSettings()
-        }
+  const promptCollection: PromptCollection = {
+    id: command.promptCollectionId,
+    kind: command.kind,
+    folderName: preparedName.folderName,
+    displayName: preparedName.displayName,
+    statusFolders: createPromptStatusFolderLayouts(),
+    settings: createEmptyPromptCollectionSettings()
+  }
   return [
     {
       type: 'update',
@@ -288,7 +278,7 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
     }
   }
   /** Prompt or template IDs owned by the deleted collection. */
-  const contentIds = getMarkdownContentIds(promptCollection, promptCollection.kind)
+  const contentIds = getMarkdownContentIds(promptCollection)
   /** Category IDs owned by the deleted collection. */
   const categoryIds = getPromptCollectionCategoryIds(promptCollection)
   /** Complete domain changes applied atomically in meaningful ownership order. */
@@ -310,7 +300,7 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
     ...contentIds.map(
       (contentId): DomainChange => ({
         type: 'delete',
-        entityType: promptCollection.kind === 'prompt' ? 'prompt' : 'promptTemplate',
+        entityType: promptCollection.kind === 'template' ? 'promptTemplate' : 'prompt',
         id: contentId
       }) as DomainChange
     ),

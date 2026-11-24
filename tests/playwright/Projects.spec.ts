@@ -4,7 +4,7 @@ import type { Page } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { createDeterministicId } from '../fixtures/FixtureIds'
-import { readWorkspaceState, runSqlStatement, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
+import { readWorkspaceState, runSqlStatement, seedWorkspaceState, toSqlText } from '../helpers/UserPersistenceHelpers'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
 import { dragGhostSelector, finishActiveDrag, moveActiveDragToTarget } from '../helpers/PromptDragDropHelpers'
 import { resolvePaletteColor } from '../helpers/PaletteHelpers'
@@ -361,7 +361,7 @@ describe('Persisted projects', () => {
     await dialog.getByTestId('manage-projects-new-button').click()
     await dialog.getByTestId('manage-projects-delete-button').click()
     await expect(mainWindow.getByRole('dialog', { name: 'Delete Project' })).toHaveCount(0)
-    await expect(dialog.locator(projectSelectorItems)).toHaveText([/Second\s*2 collections/, /Default Project\s*1 collection(?!s)/, /Removed\s*2 collections/, /Extra\s*2 collections/])
+    await expect(dialog.locator(projectSelectorItems)).toHaveText([/Second\s*3 collections/, /Default Project\s*2 collections/, /Removed\s*3 collections/, /Extra\s*3 collections/])
     /** Stable identity allocated for the draft that reuses the deleted directory. */
     const replacementId = (await dialog.locator(projectSelectorItems).nth(2).getAttribute('data-testid'))!.replace('manage-project-selector-', '')
     await dialog.getByTestId('manage-projects-save-button').click()
@@ -373,7 +373,9 @@ describe('Persisted projects', () => {
     expect(await projectPrompt(electronApp, 'DefaultProject', 'Keep Me')).toEqual(second)
     expect((await findProject(electronApp, 'Removed'))!.id).toBe(replacementId)
     expect(await readRecord(electronApp, 'promptCollection', 'removed-tasks').then(Boolean)).toBe(false)
-    expect(await rows(electronApp, 'SELECT project_id FROM content.project_collections').then((items) => items.some((item) => item.project_id === replacementId))).toBe(true)
+    expect(await rows(electronApp, `SELECT json_extract(data, '$.displayName') AS name FROM content.records
+      JOIN content.project_collections ON collection_id = id WHERE kind = 'promptCollection' AND project_id = ${toSqlText(replacementId)} ORDER BY name`))
+      .toEqual([{ name: 'My Prompts' }, { name: 'My Routines' }, { name: 'My Templates' }])
     expect(await readWorkspaceState(electronApp, workspaceId, 'collection-order', 'removed')).toBeNull()
     expect(await readWorkspaceState(electronApp, workspaceId, 'collection-favorites', defaultId)).toBeNull()
     await testHelpers.navigateToHomeScreen()

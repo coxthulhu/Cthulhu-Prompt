@@ -1,8 +1,9 @@
 import { createPrompt } from '@renderer/data/Mutations/PromptMutations'
 import { compactGuid } from '@shared/utilities/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
-import { DEFAULT_PROMPT_FALLBACK_TITLE } from '@shared/domain/prompt/promptFallbackTitle'
-import { DEFAULT_PROMPT_STATUS_FOLDER_ID, PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatusFolderId, type PromptFull } from '@shared/domain/prompt/Prompt'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
+import { collectionItemLabel } from '@shared/domain/prompt-collection/PromptCollection'
+import { DEFAULT_PROMPT_STATUS_FOLDER_ID, getContentStatusFolderEntryStatus, type PromptStatusFolderId, type PromptFull } from '@shared/domain/prompt/Prompt'
 
 /** Created prompt identity and its pending persistence. */
 export type BlankPromptCreation = {
@@ -21,14 +22,17 @@ export const createBlankPromptInCollection = (
   const promptId = compactGuid(window.crypto.randomUUID())
   /** Timestamp for the initial prompt representation. */
   const now = getCurrentIsoSecondTimestamp()
+  /** Owning collection determines the initial status, title, and template choice. */
+  const kind = promptCollectionsCollection.get(promptCollectionId)!.kind
   /** Blank editor representation using the group's entry status. */
   const optimisticPrompt: PromptFull = {
     id: promptId,
     title: '',
-    fallbackTitle: DEFAULT_PROMPT_FALLBACK_TITLE,
+    fallbackTitle: `New ${collectionItemLabel[kind]}`,
+    ...(kind === 'routine' ? { templates: null } : {}),
     createdAt: now,
     modifiedAt: now,
-    status: PROMPT_STATUS_FOLDER_REGISTRY[statusFolderId].entryStatus,
+    status: getContentStatusFolderEntryStatus(kind, statusFolderId),
     promptText: '',
     loadingState: 'full'
   }

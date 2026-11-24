@@ -1,14 +1,14 @@
 import { removeCollectionFromTabSession } from '@shared/domain/ui-state/TabSession'
 import type { DomainChange, DomainPlanner } from '../DomainChanges'
 import { planDeletePromptCollectionDomainMutation } from '../prompt-collection/PromptCollectionDomainMutations'
-import { createEmptyPromptCollectionSettings, createPromptStatusFolderLayouts, type PromptCollection } from '../prompt-collection/PromptCollection'
+import { createStarterCollection, STARTER_COLLECTION_KINDS } from '../prompt-collection/PromptCollection'
 import { preparePromptCollectionName } from '../prompt-collection/promptCollectionName'
 import { prepareProjectInfo, type Project, type ProjectInfo } from './Project'
 
 /** New projects carry stable starter identities generated before dispatch. */
 export type SaveProjectValue = {
   project: ProjectInfo
-  starterCollections: { promptCollectionId: string; templateCollectionId: string } | null
+  starterCollections: { promptCollectionId: string; templateCollectionId: string; routineCollectionId: string } | null
 }
 
 /** Complete retained project list, in the order requested by the management dialog. */
@@ -37,17 +37,10 @@ export const parseSaveProjectsCommand = (value: unknown): SaveProjectsCommand | 
     /** Existing projects must explicitly omit starter creation with null. */
     const starters = value.starterCollections
     if (starters !== null && (!starters || typeof starters !== 'object' || Array.isArray(starters) ||
-      Object.keys(starters).length !== 2 || typeof starters.promptCollectionId !== 'string' || typeof starters.templateCollectionId !== 'string')) return null
+      Object.keys(starters).length !== 3 || typeof starters.promptCollectionId !== 'string' || typeof starters.templateCollectionId !== 'string' || typeof starters.routineCollectionId !== 'string')) return null
   }
   return record as SaveProjectsCommand
 }
-
-/** Creates an empty starter collection with the same naming and status layout as ordinary collections. */
-const starterCollection = (id: string, kind: 'prompt' | 'template'): PromptCollection => ({
-  id, kind, displayName: kind === 'prompt' ? 'My Prompts' : 'My Templates',
-  folderName: kind === 'prompt' ? 'MyPrompts' : 'MyTemplates',
-  statusFolders: createPromptStatusFolderLayouts(), settings: createEmptyPromptCollectionSettings()
-})
 
 /** Plans creation, editing, ordering, and complete owned-graph deletion as one transaction. */
 export const planSaveProjects: DomainPlanner<SaveProjectsCommand> = (state, command) => {
@@ -76,11 +69,13 @@ export const planSaveProjects: DomainPlanner<SaveProjectsCommand> = (state, comm
     const project: Project = { ...info, folderName: preparePromptCollectionName(info.name).folderName,
       collectionEntries: existing?.collectionEntries ?? [] }
     if (starterCollections) {
-      for (const [id, kind] of [[starterCollections.promptCollectionId, 'prompt'], [starterCollections.templateCollectionId, 'template']] as const) {
+      for (const kind of STARTER_COLLECTION_KINDS) {
+        /** Use the same identity for the optimistic and persisted starter. */
+        const id = starterCollections[`${kind}CollectionId`]
         if (starterIds.has(id) || state.get('promptCollection', id)) throw new Error('Starter collection identity already exists')
         starterIds.add(id)
         project.collectionEntries.push({ kind: 'collection', id })
-        changes.push({ type: 'insert', entityType: 'promptCollection', id, data: starterCollection(id, kind) })
+        changes.push({ type: 'insert', entityType: 'promptCollection', id, data: createStarterCollection(id, kind) })
       }
     }
     projects.push(project)

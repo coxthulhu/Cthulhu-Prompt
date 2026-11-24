@@ -25,7 +25,7 @@
     normalizeCategoryShortDescription
   } from '@shared/domain/category/Category'
   import { compactGuid } from '@shared/utilities/compactGuid'
-  import type { PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
+  import type { PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
   import ManagementDialog from '@renderer/common/cthulhu-ui/dialogs/ManagementDialog.svelte'
   import type { ManagementSelectorPanelItem } from '@renderer/common/cthulhu-ui/selectors/ManagementSelectorPanel.svelte'
   import ManagementDescriptionField from '../management/ManagementDescriptionField.svelte'
@@ -45,7 +45,7 @@
   type Props = {
     categories: Category[]
     collectionDisplayName: string
-    contentKind: PromptCollectionContentKind
+    contentKind: PromptCollectionKind
     isWorkspaceReady: boolean
     onsubmit: (categories: ManagedCategoryInput[]) => Promise<boolean>
   }
@@ -88,7 +88,7 @@
     drafts.find((draft) => draft.id === selectedId) ?? null
   )
   /** Singular category membership noun used by selector details. */
-  const contentName = $derived(contentKind === 'template' ? 'template' : 'prompt')
+  const contentName = $derived(contentKind)
   /** Total cross-status content membership indexed by category ID. */
   const contentCountByCategoryId = $derived.by<Record<string, number>>(() => {
     /** Content records for the active collection kind. */

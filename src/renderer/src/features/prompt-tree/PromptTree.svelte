@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { collectionItemLabel } from '@shared/domain/prompt-collection/PromptCollection'
   import { getTabStateContext } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
   import { getPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
   import { emptyItemsLabel } from '@renderer/common/emptyStateText'
@@ -424,7 +425,7 @@
     collectionId: string,
     promptId: string,
     title: string,
-    contentKind: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionContentKind
+    contentKind: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionKind
   ): DraggableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     payload: {
@@ -852,7 +853,7 @@
   {:else if collectionListState === 'empty'}
     <div class="sidebarPromptTreeStatus px-2 text-sm">Create a collection to get started.</div>
   {:else if collectionListState === 'ready'}
-    {#if screenCollection && isSelectedStatusTreeEmpty && (screenCollection.kind === 'prompt' || isFinalMode)}
+    {#if screenCollection && isSelectedStatusTreeEmpty && (screenCollection.kind !== 'template' || isFinalMode)}
       <DropTarget
         getOptions={() =>
           getPromptTreePromptDroppableOptions('empty-status', 'top', () => ({
@@ -866,7 +867,7 @@
       >
         {#snippet children({ isOver, isBlocked, edge })}
           <PromptTreeInlineActionRow
-            text={`${emptyItemsLabel('prompt', statusGroup.label)}. Click to ${isFinalMode ? 'view' : 'add'}.`}
+            text={`${emptyItemsLabel(screenCollection!.kind, statusGroup.label)}. Click to ${isFinalMode ? 'view' : 'add'}.`}
             testId={`prompt-tree-${screenMode}-empty-status`}
             onclick={isFinalMode ? handleEmptyStatusSelect : () => handleTreeContentAddToTop(null)}
           />
@@ -910,7 +911,7 @@
       isExpanded={getPromptTreeCategoryExpandedState(props.row.category.id)}
       indentCount={props.row.indentCount}
       endsVisibleBranch={props.row.endsVisibleBranch}
-      contentLabel={screenCollection?.kind === 'template' ? 'Template' : 'Prompt'}
+      contentLabel={collectionItemLabel[screenCollection?.kind ?? 'prompt']}
       isAddToTopDisabled={isCreatingTreeContent}
       getCategoryContentDroppableOptions={isFinalMode
         ? undefined

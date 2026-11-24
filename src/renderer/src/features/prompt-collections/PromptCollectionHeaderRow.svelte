@@ -4,8 +4,9 @@
 </script>
 
 <script lang="ts">
+  import { collectionIcons } from '@renderer/features/prompt-collections/collectionIcons'
   import PageHeader from '@renderer/common/cthulhu-ui/layout/PageHeader.svelte'
-  import { FileText, FolderCog, Layers, Pencil, Trash2 } from 'lucide-svelte'
+  import { FolderCog, Pencil, Trash2 } from 'lucide-svelte'
   import ButtonBar from '@renderer/common/cthulhu-ui/buttons/ButtonBar.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import ToolbarButton from '@renderer/common/cthulhu-ui/buttons/ToolbarButton.svelte'
@@ -28,7 +29,7 @@
     orderedPromptCount: number
     /** Counts displayed beside registered group filters. */
     statusGroupCounts: Record<PromptStatusFolderId, number>
-    contentKind: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionContentKind
+    contentKind: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionKind
     screenMode: PromptCollectionScreenMode
     onDeletePromptCollection: () => void
     onManageCategories: () => void
@@ -41,7 +42,7 @@
 
   /** Keep displayed filter counts synchronized with the collection's current contents. */
   const statusFilterItems = $derived(
-    promptStatusGroups.filter((group) => !isTemplateCollection || group.id === 'active' || group.id === 'archived').map((group) => ({
+    promptStatusGroups.filter((group) => contentKind === 'prompt' || group.id === 'active' || group.id === 'archived').map((group) => ({
       id: group.id,
       label: group.label,
       count: statusGroupCounts[group.id],
@@ -58,11 +59,11 @@
 >
   <div class="prompt-collection-screen-header">
     <PageHeader
-      icon={isTemplateCollection ? Layers : FileText}
+      icon={collectionIcons[contentKind]}
       title={collectionDisplayName}
       titleTooltip={collectionDisplayName}
       titleTestId="prompt-collection-title"
-      subtitle={isTemplateCollection ? 'Prompt Templates' : 'Task Prompts'}
+      subtitle={contentKind === 'routine' ? 'Routines' : isTemplateCollection ? 'Prompt Templates' : 'Task Prompts'}
       subtitleTestId="prompt-collection-subtitle"
     >
       {#snippet titleAction()}
@@ -83,7 +84,7 @@
   <!-- Keep filters and collection actions aligned within the existing virtual row height. -->
   <div class="prompt-collection-toolbar">
       <ButtonBarSelector
-        label="Filter prompts"
+        label={`Filter ${contentKind}s`}
         items={statusFilterItems}
         selectedId={screenMode}
         onselect={onScreenModeChange}

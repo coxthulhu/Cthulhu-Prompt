@@ -1,3 +1,4 @@
+import type { PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 
 export enum PromptStatus {
@@ -141,7 +142,7 @@ export type PromptSummary = {
   modifiedAt: string
   category?: string
   templates?: PromptTemplateReference[] | null
-  status: PromptStatus
+  status: PromptContentStatus
   finalizedAt?: string
   loadingState: 'summary'
 }
@@ -157,7 +158,7 @@ export type PromptFull = {
   promptText: string
   fallbackTitle: string
   templates?: PromptTemplateReference[] | null
-  status: PromptStatus
+  status: PromptContentStatus
   finalizedAt?: string
   loadingState: 'full'
 }
@@ -227,18 +228,18 @@ export type PromptLocation = {
 
 /** Selects the entity-specific status when entering a shared physical folder. */
 export const getContentStatusFolderEntryStatus = (
-  kind: 'prompt' | 'template',
+  kind: PromptCollectionKind,
   folderId: PromptStatusFolderId
 ): PromptContentStatus => {
-  if (kind === 'template') {
+  if (kind !== 'prompt') {
     if (folderId === PromptStatusFolderId.Active) return PromptTemplateStatus.Active
     if (folderId === PromptStatusFolderId.Archived) return PromptTemplateStatus.Archived
-    throw new Error(`Unsupported template status folder: ${folderId}`)
+    throw new Error(`Unsupported ${kind} status folder: ${folderId}`)
   }
   return PROMPT_STATUS_FOLDER_REGISTRY[folderId].entryStatus
 }
 
 /** Returns workflow groups exposed by a task or template collection. */
-export const getContentStatusFolders = (kind: 'prompt' | 'template'): PromptStatusFolderDefinition[] =>
+export const getContentStatusFolders = (kind: PromptCollectionKind): PromptStatusFolderDefinition[] =>
   PROMPT_STATUS_FOLDERS.filter((group) => kind === 'prompt' ||
     group.id === PromptStatusFolderId.Active || group.id === PromptStatusFolderId.Archived)

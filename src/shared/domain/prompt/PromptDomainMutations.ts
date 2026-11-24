@@ -4,12 +4,12 @@ import { parseIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import { getPromptStatusFolderContentIds, planCategoryOrderedEntryMove } from '@shared/domain/markdown-content/MarkdownContent'
 import { promptTemplateEntryRef, promptEntryRef } from '@shared/domain/OrderContainer'
 import { getPromptStatusFolderDefinition, isFinalPromptStatus, isPromptStatus, PromptStatus, type PromptLocation } from '@shared/domain/prompt/Prompt'
-import type { PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
-import { DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE, resolvePromptTitleUpdateForPromptIds } from '@shared/domain/prompt/promptFallbackTitle'
+import { collectionItemLabel, type PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
+import { resolvePromptTitleUpdateForPromptIds } from '@shared/domain/prompt/promptFallbackTitle'
 
 /** Renderer-authored command setting the complete location of one prompt or template. */
 export type SetPromptLocationDomainCommand = {
-  kind: PromptCollectionContentKind
+  kind: PromptCollectionKind
   sourcePromptCollectionId: string
   promptId: string
   location: PromptLocation
@@ -41,11 +41,11 @@ export const parseSetPromptLocationDomainCommand = (value: unknown): SetPromptLo
   const location = parsePromptLocation(record.location)
   if (
     Object.keys(record).length !== 5 ||
-    (record.kind !== 'prompt' && record.kind !== 'template') ||
+    (record.kind !== 'prompt' && record.kind !== 'template' && record.kind !== 'routine') ||
     typeof record.sourcePromptCollectionId !== 'string' ||
     typeof record.promptId !== 'string' ||
     !location ||
-    (record.kind === 'template' ? !isPromptTemplateStatus(location.status) : !isPromptStatus(location.status)) ||
+    (record.kind !== 'prompt' ? !isPromptTemplateStatus(location.status) : !isPromptStatus(location.status)) ||
     parseIsoSecondTimestamp(record.modifiedAt) === null
   ) return null
   return { ...record, location } as SetPromptLocationDomainCommand
@@ -56,7 +56,7 @@ export const planSetPromptLocationDomainMutation: DomainPlanner<SetPromptLocatio
   /** Explicit content kind and complete destination carried by the validated command. */
   const { kind, location, promptId } = command
   /** Authoritative collection selected by the command's validated content kind. */
-  const entityType = kind === 'prompt' ? 'prompt' : 'promptTemplate'
+  const entityType = kind === 'template' ? 'promptTemplate' : 'prompt'
   /** Canonical content whose current status determines its source layout. */
   const prompt = state.get(entityType, promptId)
   /** Claimed source collection used to verify ownership. */
@@ -78,7 +78,7 @@ export const planSetPromptLocationDomainMutation: DomainPlanner<SetPromptLocatio
   if (
     !source || !destination || !prompt || source.kind !== kind || destination.kind !== kind ||
     actualSource?.id !== source.id ||
-    (kind === 'template' ? !isPromptTemplateStatus(location.status) : !isPromptStatus(location.status))
+    (kind !== 'prompt' ? !isPromptTemplateStatus(location.status) : !isPromptStatus(location.status))
   ) return { status: 'conflict', reason: 'Prompt location ownership conflict', targets }
 
   /** Destination workflow and its category or finalization ordering. */
@@ -98,11 +98,11 @@ export const planSetPromptLocationDomainMutation: DomainPlanner<SetPromptLocatio
         currentTitle: prompt.title,
         currentFallbackTitle: prompt.fallbackTitle,
         nextTitle: prompt.title,
-        defaultFallbackTitle: kind === 'template' ? DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE : undefined
+        defaultFallbackTitle: `New ${collectionItemLabel[kind]}`
       }).fallbackTitle
     : prompt.fallbackTitle
   /** Ordered reference shared by source removal and destination insertion. */
-  const entry = kind === 'prompt' ? promptEntryRef(promptId) : promptTemplateEntryRef(promptId)
+  const entry = kind === 'template' ? promptTemplateEntryRef(promptId) : promptEntryRef(promptId)
 
   try {
     /** Collection layout updates, empty when the content already sits at this location. */

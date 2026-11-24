@@ -1,5 +1,5 @@
 import { getStandaloneNoteIds } from '@shared/domain/note/Note'
-import { getPromptCollectionCategoryIds, type PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
+import { getCollectionContentKind, getPromptCollectionCategoryIds, type PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
 import { isFinalPromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   getMarkdownContentIds,
@@ -8,11 +8,11 @@ import {
 import { promptsCollection } from './PromptsCollection'
 
 export const getPromptCollectionAllPromptIds = (promptCollection: PromptCollection): string[] =>
-  promptCollection.kind === 'prompt' ? getMarkdownContentIds(promptCollection, 'prompt') : []
+  getMarkdownContentIds(promptCollection, 'prompt')
 
 export const isPromptCollectionEmpty = (promptCollection: PromptCollection): boolean =>
   getStandaloneNoteIds(promptCollection).length === 0 &&
-  getMarkdownContentIds(promptCollection, promptCollection.kind).length === 0 &&
+  getMarkdownContentIds(promptCollection).length === 0 &&
   getPromptCollectionCategoryIds(promptCollection).length === 0 &&
   Object.values(promptCollection.settings).every((value) => (value ?? '').trim().length === 0)
 
@@ -29,7 +29,7 @@ export const getPromptCollectionPromptIds = (promptCollection: PromptCollection)
 export const getPromptCollectionActiveEntryIds = (promptCollection: PromptCollection): string[] =>
   getOrderedMarkdownContentIds(
     promptCollection,
-    promptCollection.kind,
+    getCollectionContentKind(promptCollection.kind),
     PromptStatusFolderId.Active
   ).flatMap((entryId) => {
     if (promptCollection.kind === 'template') return [entryId]

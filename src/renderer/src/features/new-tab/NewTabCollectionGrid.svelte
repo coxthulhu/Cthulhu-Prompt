@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { collectionIcons } from '@renderer/features/prompt-collections/collectionIcons'
   import type { Action } from 'svelte/action'
-  import { EyeOff, FileText, Layers } from 'lucide-svelte'
+  import { EyeOff } from 'lucide-svelte'
   import {
     createDroppableStateRegistry,
     draggable,
@@ -53,8 +54,6 @@
   /** Empty cells after the last tile, which the grid's end covers; zero when the last row is full. */
   const emptyCellCount = $derived((COLUMN_COUNT - (collections.length % COLUMN_COUNT)) % COLUMN_COUNT)
 
-  /** Kind icon shared by a collection's tile and its drag ghost. */
-  const getCollectionIcon = (collection: PromptCollection) => (collection.kind === 'template' ? Layers : FileText)
   /** Tile action typed for SelectorButton's generic button action slot. */
   const draggableButtonAction = draggable as unknown as Action<HTMLButtonElement, unknown>
 
@@ -82,7 +81,7 @@
     createGhost: () => {
       /** Dragged tile's collection, named and iconed like its tile. */
       const { collection } = collections.find((tile: NewTabCollectionTile) => tile.id === collectionId)!
-      return createPromptDragGhost(collection.displayName, 'collection', getCollectionIcon(collection))
+      return createPromptDragGhost(collection.displayName, 'collection', collectionIcons[collection.kind])
     },
     onDragStart: () => {
       draggedId = collectionId
@@ -101,7 +100,7 @@
       <!-- The accent selection variant gives a dragged tile its dragged-row fill and border. -->
       <SelectorButton
         variant="tile"
-        icon={getCollectionIcon(collection)}
+        icon={collectionIcons[collection.kind]}
         text={collection.displayName}
         detailParts={details.modifiedText ? [details.countText, details.modifiedText] : [details.countText]}
         showChevron={false}

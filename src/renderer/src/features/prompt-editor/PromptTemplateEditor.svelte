@@ -10,7 +10,6 @@
 
   type Props = Omit<
     ComponentProps<typeof MarkdownContentEditor>,
-    | 'contentKind'
     | 'contentLabel'
     | 'metadataTemplateLabel'
     | 'metadataTemplateState'

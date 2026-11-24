@@ -1,3 +1,5 @@
+import { createStarterCollection } from '@shared/domain/prompt-collection/PromptCollection'
+import { compactGuid } from '@shared/utilities/compactGuid'
 import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { randomUUID } from 'node:crypto'
@@ -82,7 +84,7 @@ const writeProjects = (db: Database.Database, schema: 'main' | 'content', projec
 }
 
 /** Publishes a fully committed file. Validation and failed writes leave the catalog intact. */
-export const publishWorkspace = (source: WorkspaceContents): string => {
+export const publishWorkspace = (source: WorkspaceContents, version: 1 | 2 = 2): string => {
   /** Check identities even when filenames differ. */
   const catalog = listWorkspaces()
   /** Apply the same rules used for interactive creation to imported names. */
@@ -102,7 +104,7 @@ export const publishWorkspace = (source: WorkspaceContents): string => {
     const db = new Database(temporary)
     try {
       db.transaction(() => {
-        db.exec(`PRAGMA user_version = 1;
+        db.exec(`PRAGMA user_version = ${version};
           CREATE TABLE workspace (id TEXT PRIMARY KEY, name TEXT NOT NULL);
           CREATE TABLE projects (id TEXT PRIMARY KEY, data TEXT NOT NULL);
           CREATE TABLE project_collections (collection_id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id));
@@ -143,8 +145,13 @@ export const attachWorkspace = (path: string): { id: string; name: string } => {
   const db = SqliteDataAccess.getDatabase()
   db.prepare('ATTACH DATABASE ? AS content').run(path)
   activeDatabasePath = path
-  if (db.pragma('content.user_version', { simple: true }) !== 1) throw new Error('Unsupported workspace database version')
-  return db.prepare('SELECT id, name FROM content.workspace').get() as { id: string; name: string }
+  /** The workspace schema version belongs to the portable file. */
+  const version = db.pragma('content.user_version', { simple: true })
+  if (version !== 1 && version !== 2) throw new Error('Unsupported workspace database version')
+  /** Stable identity for the workspace's private collection ordering. */
+  const identity = db.prepare('SELECT id, name FROM content.workspace').get() as { id: string; name: string }
+  if (version === 1) upgradeRoutineCollections(db, identity.id)
+  return identity
 }
 
 /** Moves the open database and commits its new label and remembered path together. */
@@ -228,13 +235,42 @@ export const readWorkspaceProjects = (workspaceId: string): Project[] => {
 }
 
 /** Separately saves each project's private order and removes preferences of deleted projects. */
-export const saveWorkspaceOrder = (workspace: Workspace, previous: Project[] = []): void => {
+export const saveWorkspaceOrder = (workspace: Pick<Workspace, 'id' | 'projects'>, previous: Project[] = []): void => {
   WorkspaceStateDataAccess.write(workspace.id, 'project-order', null, { ids: workspace.projects.map((project) => project.id) })
   for (const project of workspace.projects) WorkspaceStateDataAccess.write(workspace.id, 'collection-order', project.id, { entries: project.collectionEntries })
   WorkspaceStateDataAccess.delete(workspace.id, 'collection-order', null)
   for (const old of previous) {
     if (!workspace.projects.some((project) => project.id === old.id)) WorkspaceStateDataAccess.delete(workspace.id, 'collection-order', old.id)
   }
+}
+
+/** Adds one empty routine library per legacy project and atomically advances its workspace version. */
+const upgradeRoutineCollections = (db: Database.Database, workspaceId: string): void => {
+  SqliteDataAccess.runTransaction(() => {
+    /** Existing private order, including legacy projects without explicit positions. */
+    const projects = readWorkspaceProjects(workspaceId)
+    /** Collection names are unique across all kinds within the project. */
+    const names = db.prepare(`SELECT lower(json_extract(data, '$.folderName')) FROM content.records
+      JOIN content.project_collections ON collection_id = id WHERE kind = 'promptCollection' AND project_id = ?`).pluck()
+    /** The collection record and membership must be committed together. */
+    const insertCollection = db.prepare("INSERT INTO content.records VALUES ('promptCollection', ?, ?)")
+    /** Associates each new routine collection with its project. */
+    const insertMember = db.prepare('INSERT INTO content.project_collections VALUES (?, ?)')
+    for (const project of projects) {
+      /** Reserve the first available numbered name when the default already belongs to another collection. */
+      const used = new Set(names.all(project.id))
+      /** The unsuffixed default occupies position one. */
+      let suffix = 1
+      while (used.has(suffix === 1 ? 'myroutines' : `myroutines${suffix}`)) suffix++
+      /** Starter appended after this project's existing collections. */
+      const routine = createStarterCollection(compactGuid(randomUUID()), 'routine', suffix === 1 ? '' : ` ${suffix}`)
+      insertCollection.run(routine.id, JSON.stringify(routine))
+      insertMember.run(routine.id, project.id)
+      project.collectionEntries.push(collectionEntryRef(routine.id))
+    }
+    saveWorkspaceOrder({ id: workspaceId, projects })
+    db.pragma('content.user_version = 2')
+  })
 }
 
 /** Workspace metadata and private preferences commit together on the attached connection. */

@@ -28,7 +28,7 @@
   }: {
     promptId: string
     promptCollectionId: string
-    contentKind?: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionContentKind
+    contentKind?: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionKind
     contentLabel?: string
     title: string
     isDragEnabled?: boolean

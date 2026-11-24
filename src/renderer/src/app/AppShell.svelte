@@ -193,7 +193,7 @@
     return {
       id: tab.id,
       title: openPrompt ? getPromptDisplayTitle(openPrompt) : collection.displayName,
-      screen: collection.kind === 'template' ? 'template-collection' : 'prompt-collection'
+      screen: `${collection.kind}-collection`
     }
   }))
   /** Selected title bar tab: the shown work tab or fixed screen. */
@@ -249,7 +249,7 @@
   const workspacePromptCount = $derived.by(() => {
     const promptIds = new SvelteSet<string>()
     for (const promptCollection of selectedWorkspacePromptCollections) {
-      for (const promptId of getMarkdownContentIds(promptCollection, promptCollection.kind)) {
+      for (const promptId of getMarkdownContentIds(promptCollection)) {
         promptIds.add(promptId)
       }
     }
@@ -520,7 +520,7 @@
       /** Ownership is available in collection summaries even when no editor has been loaded. */
       const categoryIds = getPromptCollectionCategoryIds(collection)
       /** Current content IDs repair single-prompt tabs and retained row selections after deletion. */
-      const contentIds = getMarkdownContentIds(collection, collection.kind)
+      const contentIds = getMarkdownContentIds(collection)
       /** Notes are loaded with the workspace before its tab session is restored. */
       const noteIds = noteQuery.data.map((note) => note.id)
       untrack(() => pruneCollectionTabViews({ tabs: workTabs.map((tab) => tab.mode.record), lastClosedCollections }, collection.id, categoryIds, contentIds, noteIds))

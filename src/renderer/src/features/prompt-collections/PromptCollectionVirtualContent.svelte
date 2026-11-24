@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { collectionItemLabel } from '@shared/domain/prompt-collection/PromptCollection'
   import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
   import { createAttachedNoteUiStateKey } from '@shared/domain/ui-state/AttachedNoteUiState'
   import { noteEditorMeasuredHeight } from '@renderer/data/UiState/cache/NoteEditorUiCache.svelte.ts'
@@ -8,7 +9,7 @@
   import { emptyCollectionMessage, createFirstItemMessage } from '@renderer/common/emptyStateText'
   import {
     type PromptCollection,
-    type PromptCollectionContentKind
+    type PromptCollectionKind
   } from '@shared/domain/prompt-collection/PromptCollection'
   import type { Category } from '@shared/domain/category/Category'
   import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/cache/PromptEditorUiCache.svelte.ts'
@@ -134,7 +135,7 @@
   type PromptCollectionVirtualContentProps = {
     workspaceId: string | null
     screenCollectionId: string
-    contentKind: PromptCollectionContentKind
+    contentKind: PromptCollectionKind
     promptEditorSizingConfig: PromptEditorSizingConfig
     promptDraftById: Record<string, MarkdownContentDraftRecord>
     promptTemplateTextById: Record<string, string>
@@ -770,15 +771,7 @@
 {/snippet}
 
 {#snippet collapsedSummaryRow({ row, rowId, rowHeightPx })}
-  {@const summaryText = `${row.promptCount} ${
-    row.promptCount === 1
-      ? isTemplateCollection
-        ? 'template'
-        : 'prompt'
-      : isTemplateCollection
-        ? 'templates'
-        : 'prompts'
-  } hidden. Click to expand...`}
+  {@const summaryText = `${row.promptCount} ${contentKind}${row.promptCount === 1 ? '' : 's'} hidden. Click to expand...`}
   <DropTarget
     getOptions={() => getPromptDividerDropOptions(rowId, row.categoryId, null)}
     class="h-full"
@@ -793,7 +786,7 @@
         {#if targetState.isOver}
           <PromptDivider
             mode="add"
-            contentLabel={isTemplateCollection ? 'Template' : 'Prompt'}
+            contentLabel={collectionItemLabel[contentKind]}
             indicatorState={targetState}
             testId={`category-collapsed-drop-indicator-${row.categoryId}`}
           />
@@ -830,7 +823,7 @@
     {#key row.nextCategoryId}
       <PromptDivider
         mode="separator"
-        contentLabel={isTemplateCollection ? 'Template' : 'Prompt'}
+        contentLabel={collectionItemLabel[contentKind]}
         getCategoryDropOptions={() =>
           getCategoryDividerDropOptions(rowId, row.nextCategoryId)}
         testId={`category-divider-drop-${row.categoryId}`}
@@ -856,7 +849,7 @@
       disabled={isCreatingPrompt}
       revealed={orderedPromptCount === 0}
       mode={showsActions ? 'add' : 'separator'}
-      contentLabel={isTemplateCollection ? 'Template' : 'Prompt'}
+      contentLabel={collectionItemLabel[contentKind]}
       onAddPrompt={showsActions ? () => onAddPrompt(target) : undefined}
       getDropOptions={!showsActions
         ? undefined
@@ -898,6 +891,7 @@
   }}
   <PromptCollectionSectionRow {rowHeightPx} indentLevel={row.indentLevel}>
     <ContentEditorRow
+      {contentKind}
       {workspaceId}
       {screenCollectionId}
       promptCollectionId={screenCollectionId}
@@ -936,7 +930,7 @@
       onInteraction={() => onPromptInteraction(promptTarget)}
       onOpen={() => onOpenPrompt(row.promptId)}
       onArchive={() => onSetPromptStatus(row.promptId, isTemplateCollection ? PromptTemplateStatus.Archived : PromptStatus.Archived)}
-      onRestore={isTemplateCollection && promptMetadata.status === PromptTemplateStatus.Archived
+      onRestore={contentKind !== 'prompt' && promptMetadata.status === PromptTemplateStatus.Archived
         ? () => onSetPromptStatus(row.promptId, PromptTemplateStatus.Active)
         : undefined}
       onTemplateSelect={isTemplateCollection
@@ -947,7 +941,7 @@
         : () => copyWorkflow?.openTemplateSelection(row.promptId, 'select-and-copy')}
       onCopySuccess={isTemplateCollection ? undefined : () => copyWorkflow?.handlePromptCopySuccess(row.promptId)}
       onBeforeCopy={isTemplateCollection ? undefined : () => copyWorkflow!.confirmPromptCopy(row.promptId)}
-      onStatusChange={isTemplateCollection ? undefined : (status) => {
+      onStatusChange={contentKind !== 'prompt' ? undefined : (status) => {
         onSetPromptStatus(row.promptId, status)
       }}
       onMoveUp={() => (isFinalMode ? Promise.resolve(false) : onMovePromptUp(promptTarget))}
@@ -967,7 +961,7 @@
 <PromptCopyWorkflow
   bind:this={copyWorkflow}
   {workspaceId}
-  {isTemplateCollection}
+  {contentKind}
   {promptDraftById}
   {promptTemplateTextById}
   getStatus={(promptId) => (promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status}

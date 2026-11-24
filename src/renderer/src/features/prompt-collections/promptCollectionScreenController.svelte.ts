@@ -23,7 +23,8 @@ import {
 import {
   getCategoryOrderCategoryIds,
   type PromptCollection,
-  type PromptCollectionContentKind
+  getCollectionContentKind,
+  type PromptCollectionKind
 } from '@shared/domain/prompt-collection/PromptCollection'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
 import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
@@ -179,7 +180,7 @@ export const createPromptCollectionScreenController = ({
 
     return null
   })
-  const contentKind = $derived<PromptCollectionContentKind>(
+  const contentKind = $derived<PromptCollectionKind>(
     screenCollection?.kind ?? 'prompt'
   )
   const isTemplateCollection = $derived(contentKind === 'template')
@@ -831,10 +832,7 @@ export const createPromptCollectionScreenController = ({
       return false
     }
 
-    for (const promptId of getMarkdownContentIds(
-      cachedPromptCollection,
-      cachedPromptCollection.kind
-    )) {
+    for (const promptId of getMarkdownContentIds(cachedPromptCollection)) {
       if (cachedPromptCollection.kind === 'template') {
         const template = promptTemplatesCollection.get(promptId)
         if (
@@ -1117,7 +1115,7 @@ export const createPromptCollectionScreenController = ({
       })
       for (const entry of group.entries) {
         // Notes are not rendered as content rows, so they are never move-button positions.
-        if (entry.kind !== screenCollection.kind) continue
+        if (entry.kind !== getCollectionContentKind(screenCollection.kind)) continue
         targets.push({
           collectionId: screenCollection.id,
           categoryId: group.categoryId,
@@ -1344,7 +1342,7 @@ export const createPromptCollectionScreenController = ({
     get promptEditorSizingConfig(): PromptEditorSizingConfig {
       return promptEditorSizingConfig
     },
-    get contentKind(): PromptCollectionContentKind {
+    get contentKind(): PromptCollectionKind {
       return contentKind
     },
     get collectionDisplayName(): string {

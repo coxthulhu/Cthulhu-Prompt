@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import { Folder, Settings } from 'lucide-svelte'
+  import { STARTER_COLLECTION_KINDS } from '@shared/domain/prompt-collection/PromptCollection'
   import { getProjectInfoErrors, type ProjectInfo } from '@shared/domain/workspace/Project'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
   import { compactGuid } from '@shared/utilities/compactGuid'
@@ -27,8 +28,6 @@
   /** Workspace whose projects are managed; null while no workspace is open. */
   let { workspace }: { workspace: Workspace | null } = $props()
 
-  /** Starter collections every new project receives when saved. */
-  const NEW_PROJECT_COLLECTION_COUNT = 2
   /** Component-scoped identity prevents separate dialogs from sharing Monaco models. */
   const modelOwnerId = globalThis.crypto.randomUUID()
   /** Increasing identity gives every dialog opening fresh Monaco draft models. */
@@ -74,7 +73,7 @@
     drafts.map((draft) => {
       /** Saved collection count, or the starter collections a new project will receive. */
       const count = workspace?.projects.find((project) => project.id === draft.id)?.collectionEntries.length ??
-        NEW_PROJECT_COLLECTION_COUNT
+        STARTER_COLLECTION_KINDS.length
       return {
         id: draft.id,
         icon: Folder,
@@ -286,7 +285,7 @@
 <ConfirmationDialog
   open={pendingDeleteDraft !== null}
   title="Delete Project"
-  description="This project and all of its collections, prompts, and templates will be permanently deleted when you save your changes."
+  description="This project and everything in its collections will be permanently deleted when you save your changes."
   confirmationText="Yes, I want to delete this project and all of its contents."
   confirmText="Delete project"
   confirmTestId="manage-projects-confirm-delete-button"

@@ -9,9 +9,21 @@ import {
   PromptStatusFolderId
 } from '@shared/domain/prompt/Prompt'
 
-export type PromptCollectionKind = 'prompt' | 'template'
+/** The collection owns the workflow, independently of the stored editor record. */
+export type PromptCollectionKind = 'prompt' | 'template' | 'routine'
 
-export type PromptCollectionContentKind = PromptCollectionKind
+/** Starter libraries in their initial project and tab order. */
+export const STARTER_COLLECTION_KINDS = ['prompt', 'template', 'routine'] as const
+
+/** Routines share task prompt records and template references. */
+export type PromptCollectionContentKind = 'prompt' | 'template'
+
+/** Resolves the record kind in category order and content storage. */
+export const getCollectionContentKind = (kind: PromptCollectionKind): PromptCollectionContentKind =>
+  kind === 'template' ? 'template' : 'prompt'
+
+/** Singular noun used for content actions and collection summaries. */
+export const collectionItemLabel = { prompt: 'Prompt', template: 'Template', routine: 'Routine' } as const
 
 /** Ordered prompt or template reference stored inside one category group. */
 export type CategoryOrderEntryRef = PromptEntryRef | PromptTemplateEntryRef | NoteEntryRef
@@ -243,7 +255,7 @@ interface PromptCollectionBase {
 }
 
 export interface PromptContentCollection extends PromptCollectionBase {
-  kind: 'prompt'
+  kind: 'prompt' | 'routine'
   settings: PromptCollectionSettings
   statusFolders: PromptStatusFolderLayouts
 }
@@ -259,7 +271,7 @@ export type PromptCollection = PromptContentCollection | PromptTemplateCollectio
 
 /** Returns every independently ordered category layout owned by one collection. */
 export const getPromptCollectionCategoryOrders = (promptCollection: PromptCollection): CategoryOrder[] =>
-  promptCollection.kind === 'template'
+  promptCollection.kind !== 'prompt'
     ? [promptCollection.statusFolders.active.categoryOrder]
     : Object.values(promptCollection.statusFolders).flatMap((layout) =>
         layout.ordering === 'category' ? [layout.categoryOrder] : []
@@ -314,6 +326,14 @@ export const PROMPT_COLLECTION_SETTINGS_FIND_SECTION_KEYS = Object.fromEntries(
 export const createEmptyPromptCollectionSettings = (): PromptCollectionSettings => ({
   collectionDescription: null
 })
+
+/** Creates a project's starter library with a stable ID and optional collision suffix. */
+export const createStarterCollection = (id: string, kind: PromptCollectionKind, suffix = ''): PromptCollection => {
+  /** Display and directory names follow the standard per-project naming rules. */
+  const displayName = `My ${collectionItemLabel[kind]}s${suffix}`
+  return { id, kind, displayName, folderName: displayName.replaceAll(' ', ''),
+    statusFolders: createPromptStatusFolderLayouts(), settings: createEmptyPromptCollectionSettings() }
+}
 
 export const copyPromptCollectionSettings = (
   settings: PromptCollectionSettings

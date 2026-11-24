@@ -40,7 +40,7 @@ export const getPromptCollectionDetails = (
 
   return {
     count: entryIds.length,
-    countText: `${entryIds.length} ${promptCollection.kind === 'template' ? 'template' : 'prompt'}${entryIds.length === 1 ? '' : 's'}`,
+    countText: `${entryIds.length} ${promptCollection.kind}${entryIds.length === 1 ? '' : 's'}`,
     modifiedText: relativeTime && `${relativeTime[0]!.toUpperCase()}${relativeTime.slice(1)}`
   }
 }

@@ -1,11 +1,11 @@
 import type { ComponentType } from 'svelte'
-import { FileText, Folder } from 'lucide-svelte'
+import { FileText, Folder, Repeat } from 'lucide-svelte'
 import type { DragGhostOptions } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
 import PromptDragGhost from './PromptDragGhost.svelte'
 
 // Identifies the dragged item: editor content, a category, or a New Tab project or collection.
 export type PromptDragGhostKind =
-  | import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionContentKind
+  | import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionKind
   | 'category'
   | 'project'
   | 'collection'
@@ -14,7 +14,7 @@ export type PromptDragGhostKind =
 export const createPromptDragGhost = (
   title: string,
   kind: PromptDragGhostKind = 'prompt',
-  icon: ComponentType = kind === 'category' ? Folder : FileText
+  icon: ComponentType = kind === 'category' ? Folder : kind === 'routine' ? Repeat : FileText
 ): DragGhostOptions => ({
   component: PromptDragGhost,
   kind,

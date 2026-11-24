@@ -16,7 +16,7 @@
   /** Template selection, copy confirmation, and copy-driven status changes shared by prompt editor screens. */
   let {
     workspaceId,
-    isTemplateCollection,
+    contentKind,
     promptDraftById,
     promptTemplateTextById,
     getStatus,
@@ -24,7 +24,7 @@
   }: {
     workspaceId: string | null
     /** Templates are copied verbatim and never select templates of their own. */
-    isTemplateCollection: boolean
+    contentKind: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionKind
     /** Editor view models for every prompt that can open these dialogs. */
     promptDraftById: Record<string, MarkdownContentDraftRecord>
     /** Full template text applied to copied prompts. */
@@ -49,7 +49,7 @@
   export const confirmPromptCopy = (promptId: string): Promise<boolean> => {
     /** Current status supplies both the confirmation condition and its explanation. */
     const status = getStatus(promptId)
-    if (status !== PromptStatus.Backlog && status !== PromptStatus.Completed && status !== PromptStatus.Archived) {
+    if (contentKind !== 'prompt' || (status !== PromptStatus.Backlog && status !== PromptStatus.Completed && status !== PromptStatus.Archived)) {
       return Promise.resolve(true)
     }
     return new Promise((resolve) => {
@@ -67,7 +67,7 @@
   export const getCopyTemplateTexts = (
     selectedTemplates: PromptTemplateReference[] | null | undefined
   ): string[] => {
-    if (isTemplateCollection) return []
+    if (contentKind === 'template') return []
     return (selectedTemplates ?? []).flatMap((template) => {
       const selectedTemplateText = promptTemplateTextById[template.id]
       return selectedTemplateText === undefined ? [] : [selectedTemplateText]
@@ -107,13 +107,14 @@
     setPromptTemplates(promptId, templates)
     /** Both copy actions share the same successful-copy status transition. */
     const status = getStatus(promptId)
-    const nextStatus = isPromptStatus(status) ? PROMPT_STATUS_BEHAVIORS[status].copyStatus : undefined
+    const nextStatus = contentKind === 'prompt' && isPromptStatus(status) ? PROMPT_STATUS_BEHAVIORS[status].copyStatus : undefined
     if (nextStatus) onSetPromptStatus(promptId, nextStatus)
   }
 </script>
 
 <PromptTemplateSelectionDialog
   bind:open={isTemplateSelectionDialogOpen}
+  itemLabel={contentKind === 'routine' ? 'routine' : 'prompt'}
   {workspaceId}
   mode={templateSelectionMode}
   selectedTemplates={templateSelectionPromptId

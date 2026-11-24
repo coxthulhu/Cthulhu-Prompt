@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { collectionItemLabel } from '@shared/domain/prompt-collection/PromptCollection'
+  import { collectionIcons } from '@renderer/features/prompt-collections/collectionIcons'
   import { findCollectionProject } from '@shared/domain/workspace/Project'
   import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
   import { getPromptStatusFolderDefinition } from '@shared/domain/prompt/Prompt'
@@ -17,9 +19,7 @@
     ArrowUpToLine,
     ChevronsDownUp,
     ChevronsUpDown,
-    FileText,
     FolderCog,
-    Layers,
     LayoutGrid,
     MoreHorizontal,
     Pencil,
@@ -175,13 +175,16 @@
       ? 'Expand All Categories'
       : 'Collapse All Categories'
   )
-  const isTemplateCollection = $derived(screenCollection?.kind === 'template')
+  /** The selected collection determines the sidebar icon, names, and visible status groups. */
+  const collectionKind = $derived(screenCollection?.kind ?? 'prompt')
+  /** Selects template records only for template libraries. */
+  const isTemplateCollection = $derived(collectionKind === 'template')
   /** Exact group counts shown in the accordion headers. */
   const selectedPromptStatusCounts = $derived(getPromptStatusGroupCounts(screenCollection, isTemplateCollection ? promptTemplateQuery.data.map((template) => ({ ...template, status: template.status ?? PromptTemplateStatus.Active })) : promptQuery.data))
   /** Category workflows are always present; finalized groups follow their toggles. */
   const visibleStatusGroups = $derived(
     sidebarPromptStatusGroups.filter((group) =>
-      (!isTemplateCollection || group.id === 'active' || group.id === 'archived') && (group.ordering === 'category' || shownFinalStatusGroups[group.id])
+      (collectionKind === 'prompt' || group.id === 'active' || group.id === 'archived') && (group.ordering === 'category' || shownFinalStatusGroups[group.id])
     )
   )
   // Keep selected-collection overflow actions together as the toolbar gets tighter.
@@ -342,7 +345,7 @@
 
 <div class="collectionSidebar flex min-h-0 flex-1 flex-col">
   <div class="shrink-0">
-    <SidebarHeader {title} icon={isTemplateCollection ? Layers : FileText} screenHeader>
+    <SidebarHeader {title} icon={collectionIcons[collectionKind]} screenHeader>
       <Button text="Show All" appearance="outline" borderless icon={LayoutGrid}
         class="sidebarCollectionShowAll" onclick={onShowAll} testId="sidebar-show-all-button" />
     </SidebarHeader>
@@ -363,11 +366,11 @@
           onclick={selectCollectionOverview}
         />
         {#if screenCollection}
-          {#each promptStatusGroups.filter((group) => group.ordering === 'finalizedAt' && (!isTemplateCollection || group.id === 'archived')) as group (group.id)}
+          {#each promptStatusGroups.filter((group) => group.ordering === 'finalizedAt' && (collectionKind === 'prompt' || group.id === 'archived')) as group (group.id)}
             <IconButton
               icon={group.toggleIcon}
-              label={`Show ${group.label} ${isTemplateCollection ? 'Templates' : 'Prompts'}`}
-              title={`Show ${group.label} ${isTemplateCollection ? 'Templates' : 'Prompts'}`}
+              label={`Show ${group.label} ${collectionItemLabel[collectionKind]}s`}
+              title={`Show ${group.label} ${collectionItemLabel[collectionKind]}s`}
               borderless
               baseVariant="dim"
               disabled={!screenCollection}

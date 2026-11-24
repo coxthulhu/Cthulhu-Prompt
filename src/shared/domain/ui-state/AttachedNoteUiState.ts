@@ -46,7 +46,7 @@ export const planSetAttachedNoteVisible: DomainPlanner<AttachedNoteUiState> = (s
     !getWorkspaceCollectionEntries(workspace).some((entry) => {
       /** Collection containing the attachment's owner. */
       const collection = state.get('promptCollection', entry.id)
-      return collection && getMarkdownContentIds(collection, collection.kind).includes(attachment.owner.id)
+      return collection && getMarkdownContentIds(collection).includes(attachment.owner.id)
     })) return { status: 'conflict', reason: 'Attached note visibility conflict', targets }
   return state.get('attachedNoteUiState', id)
     ? [{ type: 'update', entityType: 'attachedNoteUiState', id, recipe: (draft) => { draft.visible = command.visible } }]

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { collectionItemLabel } from '@shared/domain/prompt-collection/PromptCollection'
   import { onMount, untrack } from 'svelte'
   import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
   import { X } from 'lucide-svelte'
@@ -90,7 +91,10 @@
   let copyWorkflow = $state<PromptCopyWorkflow | null>(null)
 
   const collection = $derived(collectionQuery.data.find((candidate) => candidate.id === collectionId) ?? null)
-  const isTemplateCollection = $derived(collection?.kind === 'template')
+  /** Drives editor labels, copy behavior, and the workflow shown for this tab. */
+  const contentKind = $derived(collection?.kind ?? 'prompt')
+  /** Template libraries read the template entity and editor model. */
+  const isTemplateCollection = $derived(contentKind === 'template')
   /** Full prompt or template, or null while unloaded or after deletion. */
   const content = $derived.by(() => {
     if (isTemplateCollection) {
@@ -102,7 +106,7 @@
   })
   /** Whether the content still belongs to this collection. */
   const isInCollection = $derived(
-    collection !== null && getMarkdownContentIds(collection, collection.kind).includes(promptId)
+    collection !== null && getMarkdownContentIds(collection).includes(promptId)
   )
   /** Content can be shown only while it is loaded and still in this collection. */
   const isOpenable = $derived(isLoaded && content !== null && isInCollection)
@@ -270,7 +274,7 @@
             onclick: () => navigateToCollectionRow(categoryId ?? collectionId, promptIdToPromptNavigationRow(promptId))
           }
         })}
-        findLabel={`Find in ${isTemplateCollection ? 'Template' : 'Prompt'} (Control + F)`}
+        findLabel={`Find in ${collectionItemLabel[contentKind]} (Control + F)`}
         onFind={findControls.toggleFindDialog}
       >
         {#snippet pathActions()}
@@ -296,6 +300,7 @@
       >
         {#if isOpenable && draft && editorAreaHeightPx > 0}
           <ContentEditor
+            {contentKind}
             layout="screen"
             onClose={sidebarModeData.closeOpenPrompt}
             {workspaceId}
@@ -331,7 +336,7 @@
               : () => copyWorkflow?.openTemplateSelection(promptId, 'select-and-copy')}
             onCopySuccess={isTemplateCollection ? undefined : () => copyWorkflow?.handlePromptCopySuccess(promptId)}
             onBeforeCopy={isTemplateCollection ? undefined : () => copyWorkflow!.confirmPromptCopy(promptId)}
-            onStatusChange={isTemplateCollection
+            onStatusChange={contentKind !== 'prompt'
               ? undefined
               : (nextStatus) => setMarkdownContentStatus(collectionId, promptId, nextStatus)}
             onMoveUp={() => Promise.resolve(false)}
@@ -355,7 +360,7 @@
 <PromptCopyWorkflow
   bind:this={copyWorkflow}
   {workspaceId}
-  {isTemplateCollection}
+  {contentKind}
   promptDraftById={draft ? { [promptId]: draft } : {}}
   {promptTemplateTextById}
   getStatus={() => status}

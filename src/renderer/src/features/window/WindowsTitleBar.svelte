@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
-  import { Download, FileText, Layers, LayoutGrid, PanelLeftClose, PanelLeftOpen, Plus, X } from 'lucide-svelte'
+  import { Download, FileText, Layers, LayoutGrid, PanelLeftClose, PanelLeftOpen, Plus, Repeat, X } from 'lucide-svelte'
   // Application artwork shown at the start of the title bar.
   import appIcon from '@renderer/assets/cutethulhu.png'
   import { screens, type ScreenId } from '@renderer/app/screens'
@@ -81,7 +81,8 @@
   const workTabIcons: Record<WorkTabScreen, ComponentType> = {
     'new-tab': LayoutGrid,
     'prompt-collection': FileText,
-    'template-collection': Layers
+    'template-collection': Layers,
+    'routine-collection': Repeat
   }
   /** Rotating hover message on the Test Screen button; it changes on each pointer entry. */
   let testScreenTooltip = $state<string>(INITIAL_TEST_SCREEN_TOOLTIP)

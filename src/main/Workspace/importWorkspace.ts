@@ -167,5 +167,6 @@ export const importWorkspace = (path: string): string => {
       }
     }
   }
-  return publishWorkspace(source)
+  // A folder import has the v1 collection layout and receives the same upgrade on first open.
+  return publishWorkspace(source, 1)
 }

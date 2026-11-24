@@ -63,6 +63,7 @@ const workspaceFiles = {
 
 /** Tile text for each fixture collection: name, then its count. */
 const tileText = {
+  routines: /My Routines\s*0 routines/,
   bugTriage: /Bug Triage\s*2 prompts/,
   featureWork: /Feature Work\s*1 prompt(?!s)/,
   codeReview: /Code Review\s*1 template(?!s)/,
@@ -200,10 +201,10 @@ describe('New Tab Screen', () => {
 
     // Projects follow the workspace, and each one's collections follow its Show All order with kind icons and counts.
     await expectSectionNames(mainWindow, ['Harbor API', 'Default Project'])
-    await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.endpointTests, tileText.releaseNotes])
-    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.codeReview, tileText.featureWork, tileText.bugTriage])
+    await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.endpointTests, tileText.releaseNotes, tileText.routines])
+    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.codeReview, tileText.featureWork, tileText.bugTriage, tileText.routines])
     await expect(getTiles(mainWindow, defaultProjectId).locator('svg')).toContainClass([
-      'lucide-layers', 'lucide-file-text', 'lucide-file-text'
+      'lucide-layers', 'lucide-file-text', 'lucide-file-text', 'lucide-repeat'
     ])
 
     // Pressing a project title's drag handle leaves the New Tab screen as it is.
@@ -222,7 +223,7 @@ describe('New Tab Screen', () => {
     // A matching project name keeps every collection in that project and hides the other project.
     await search.fill('hArBoR')
     await expectSectionNames(mainWindow, ['Harbor API'])
-    await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.endpointTests, tileText.releaseNotes])
+    await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.endpointTests, tileText.releaseNotes, tileText.routines])
 
     // Otherwise only matching collections show, in their projects' order, and projects without matches hide.
     await search.fill('RE')
@@ -243,7 +244,7 @@ describe('New Tab Screen', () => {
     // Clearing the search shows everything again.
     await search.fill('')
     await expectSectionNames(mainWindow, ['Harbor API', 'Default Project'])
-    await expect(getTiles(mainWindow, defaultProjectId)).toHaveCount(3)
+    await expect(getTiles(mainWindow, defaultProjectId)).toHaveCount(4)
     await expect(noResults).toHaveCount(0)
   })
 
@@ -281,10 +282,10 @@ describe('New Tab Screen', () => {
     await search.fill('release')
     await expectSectionNames(mainWindow, ['Harbor API', 'Lantern Mobile'])
     await expect(getTiles(mainWindow, lanternProjectId)).toHaveText([/Release Checklist/, /Release Builds/])
-    await expect(getHiddenCollections(mainWindow, harborProjectId)).toHaveText('1 Collection Hidden')
+    await expect(getHiddenCollections(mainWindow, harborProjectId)).toHaveText('2 Collections Hidden')
     /** Lantern Mobile's hidden-collections card. */
     const lanternHiddenCard = getHiddenCollections(mainWindow, lanternProjectId)
-    await expect(lanternHiddenCard).toHaveText('2 Collections Hidden')
+    await expect(lanternHiddenCard).toHaveText('3 Collections Hidden')
     await expect(lanternHiddenCard.locator('svg')).toContainClass('lucide-eye-off')
     await expect(lanternHiddenCard).toHaveCSS('color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-muted-text'))
     await expect(lanternHiddenCard).toHaveCSS('border-top-style', 'dashed')
@@ -305,7 +306,7 @@ describe('New Tab Screen', () => {
     await search.fill('RE')
     await expectSectionNames(mainWindow, ['Harbor API', 'Default Project', 'Lantern Mobile'])
     await expect(getTiles(mainWindow, lanternProjectId)).toHaveText([/Release Checklist/, /Release Builds/, /Crash Reports/])
-    await expect(hiddenCollectionCards).toHaveText(['1 Collection Hidden', '1 Collection Hidden', '1 Collection Hidden'])
+    await expect(hiddenCollectionCards).toHaveText(['2 Collections Hidden', '2 Collections Hidden', '2 Collections Hidden'])
     const firstRowBox = (await mainWindow.getByTestId('new-tab-collection-release-checklist').boundingBox())!
     const nextRowCardBox = (await lanternHiddenCard.boundingBox())!
     expect(Math.abs(nextRowCardBox.x - firstRowBox.x)).toBeLessThanOrEqual(1)
@@ -346,7 +347,7 @@ describe('New Tab Screen', () => {
     await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveAttribute('aria-selected', 'true')
     await expectSectionNames(mainWindow, ['Harbor API', 'Default Project', 'Lantern Mobile'])
     await expect(getSections(mainWindow).nth(2).locator('[data-testid^="new-tab-collection-"]'))
-      .toHaveText([/My Prompts\s*0 prompts/, /My Templates\s*0 templates/])
+      .toHaveText([/My Prompts\s*0 prompts/, /My Templates\s*0 templates/, tileText.routines])
 
     // Edit Project opens Manage Projects to that project, and a rename shows on the New Tab screen.
     await mainWindow.getByTestId(`new-tab-edit-project-${harborProjectId}`).click()
@@ -359,11 +360,13 @@ describe('New Tab Screen', () => {
     await expect(mainWindow.getByTestId(`new-tab-project-title-${harborProjectId}`)).toHaveText('Harbor Web')
   })
 
-  test('creates task and template collections in a project from its New Collection dialog type picker', async ({ electronApp, testSetup }) => {
+  test('creates task, template, and routine collections in a project from its New Collection dialog type picker', async ({ electronApp, testSetup }) => {
     const mainWindow = await openNewTab(electronApp, testSetup)
     /** Creation dialog opened by each project's New Collection button. */
     const dialog = mainWindow.getByRole('dialog', { name: 'Create Collection' })
     const taskOption = dialog.getByTestId('create-prompt-collection-type-prompt')
+    /** Third card creates a routine collection in this project. */
+    const routineOption = dialog.getByTestId('create-prompt-collection-type-routine')
     const templateOption = dialog.getByTestId('create-prompt-collection-type-template')
     const nameInput = dialog.getByTestId('create-prompt-collection-name-input')
     const createButton = dialog.getByTestId('create-prompt-collection-button')
@@ -375,7 +378,8 @@ describe('New Tab Screen', () => {
     await mainWindow.getByTestId(`new-tab-new-collection-${harborProjectId}`).click()
     await expect(dialog.getByTestId('create-prompt-collection-type-selector').getByRole('button')).toHaveText([
       /Task Collection\s*Describes one piece of work.*Apply a template to guide the work/,
-      /Template Collection\s*Wraps a task when applied to it.*Sets response rules, like "be concise"/
+      /Template Collection\s*Wraps a task when applied to it.*Sets response rules, like "be concise"/,
+      /Routine Collection\s*Save work you do repeatedly/
     ])
     const typeFieldBox = (await dialog.getByTestId('create-prompt-collection-type-field').boundingBox())!
     const nameFieldBox = (await dialog.getByTestId('prompt-collection-name-field').boundingBox())!
@@ -384,7 +388,11 @@ describe('New Tab Screen', () => {
     const templateBox = (await templateOption.boundingBox())!
     expect(Math.abs(taskBox.x - typeFieldBox.x)).toBeLessThanOrEqual(1)
     expect(Math.abs(templateBox.x - (taskBox.x + taskBox.width + 12))).toBeLessThanOrEqual(1)
-    expect(Math.abs(templateBox.x + templateBox.width - (typeFieldBox.x + typeFieldBox.width))).toBeLessThanOrEqual(1)
+    /** The third card completes the row at the right edge of the field. */
+    const routineBox = (await routineOption.boundingBox())!
+    expect(Math.abs(routineBox.x - (templateBox.x + templateBox.width + 12))).toBeLessThanOrEqual(1)
+    expect(Math.abs(routineBox.width - templateBox.width)).toBeLessThanOrEqual(1)
+    expect(Math.abs(routineBox.x + routineBox.width - (typeFieldBox.x + typeFieldBox.width))).toBeLessThanOrEqual(1)
     expect(Math.abs(templateBox.width - taskBox.width)).toBeLessThanOrEqual(1)
     expect(Math.abs(templateBox.y - taskBox.y)).toBeLessThanOrEqual(1)
     expect(Math.abs(templateBox.height - taskBox.height)).toBeLessThanOrEqual(1)
@@ -422,14 +430,21 @@ describe('New Tab Screen', () => {
     await createButton.click()
     await expect(dialog).toHaveCount(0)
 
-    // Both new collections show in that project only, with their kind icons, and the New Tab screen stays.
+    await mainWindow.getByTestId(`new-tab-new-collection-${harborProjectId}`).click()
+    await routineOption.click()
+    await nameInput.fill('Release Checks')
+    await createButton.click()
+    await expect(dialog).toHaveCount(0)
+
+    // The new collections show in that project only, with their kind icons, and the New Tab screen stays.
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     /** Harbor API's tiles, created ones included. */
     const harborTiles = getTiles(mainWindow, harborProjectId)
-    await expect(harborTiles).toHaveCount(4)
+    await expect(harborTiles).toHaveCount(6)
+    await expect(harborTiles.filter({ hasText: 'Release Checks' }).locator('svg.lucide-repeat')).toHaveCount(1)
     await expect(harborTiles.filter({ hasText: 'Bug Triage' }).locator('svg.lucide-file-text')).toHaveCount(1)
     await expect(harborTiles.filter({ hasText: 'Changelog' }).locator('svg.lucide-layers')).toHaveCount(1)
-    await expect(getTiles(mainWindow, defaultProjectId)).toHaveCount(3)
+    await expect(getTiles(mainWindow, defaultProjectId)).toHaveCount(4)
   })
 
   test('keeps existing same-name collections and allows renaming one to a name used in another project', async ({ electronApp, testSetup }) => {
@@ -524,7 +539,9 @@ describe('New Tab Screen', () => {
 
   test('reorders collections by dragging their tiles onto a vertical drop line within their own project', async ({ electronApp, testSetup }) => {
     const mainWindow = await openNewTab(electronApp, testSetup)
-    /** Bug Triage, the default project's last tile. */
+    /** The routine tile follows Bug Triage at the start of the next row. */
+    const routineId = (await readCollectionOrder(electronApp, defaultProjectId))!.at(-1)!
+    /** Bug Triage closes the first row. */
     const bugTriageTile = mainWindow.getByTestId('new-tab-collection-bug-triage')
     /** Cursor ghost naming the dragged collection. */
     const dragGhost = mainWindow.locator(dragGhostSelector)
@@ -542,7 +559,8 @@ describe('New Tab Screen', () => {
     // Both of the dragged tile's own lines change nothing, so they are gray: past its own middle, the line after it, and
     // past the middle of the tile before it, the line on its own left.
     await moveActiveDragToTarget(mainWindow, collectionTileSelector('bug-triage'), 'center', 'right')
-    await expectTileDropIndicator(mainWindow, 'bug-triage', 'right', true)
+    await moveActiveDragToTarget(mainWindow, collectionTileSelector(routineId), 'center', 'left')
+    await expectTileDropIndicator(mainWindow, routineId, 'left', true)
     await moveActiveDragToTarget(mainWindow, collectionTileSelector('feature-work'), 'center', 'right')
     await expectTileDropIndicator(mainWindow, 'bug-triage', 'left', true)
 
@@ -551,7 +569,7 @@ describe('New Tab Screen', () => {
     await moveActiveDragToTarget(mainWindow, collectionTileSelector('code-review'), 'center', 'left')
     await expectTileDropIndicator(mainWindow, 'code-review', 'left', false)
     await expect(bugTriageTile).toHaveAttribute('data-row-state', 'dragging')
-    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.codeReview, tileText.featureWork, tileText.bugTriage])
+    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.codeReview, tileText.featureWork, tileText.bugTriage, tileText.routines])
 
     // More than 100px above its own grid, over the top of another project's tile, there is no drop line.
     await moveActiveDragToTarget(mainWindow, collectionTileSelector('endpoint-tests'), 'top')
@@ -561,36 +579,30 @@ describe('New Tab Screen', () => {
     await finishActiveDrag(mainWindow)
     await expect(bugTriageTile).toHaveAttribute('data-row-state', 'idle')
     await expect(dragGhost).toHaveCount(0)
-    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.codeReview, tileText.featureWork, tileText.bugTriage])
-    await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.endpointTests, tileText.releaseNotes])
-    expect(await readCollectionOrder(electronApp, defaultProjectId)).toEqual(['code-review', 'feature-work', 'bug-triage'])
+    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.codeReview, tileText.featureWork, tileText.bugTriage, tileText.routines])
+    await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.endpointTests, tileText.releaseNotes, tileText.routines])
+    expect(await readCollectionOrder(electronApp, defaultProjectId)).toEqual(['code-review', 'feature-work', 'bug-triage', routineId])
     await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['New Tab'])
 
     // Dropping on the blue line saves the tile first without opening it.
     await beginPointerDrag(mainWindow, 'new-tab-collection-bug-triage')
     await moveActiveDragToTarget(mainWindow, collectionTileSelector('code-review'), 'center', 'left')
     await finishActiveDrag(mainWindow)
-    await expect.poll(() => readCollectionOrder(electronApp, defaultProjectId)).toEqual(['bug-triage', 'code-review', 'feature-work'])
-    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.bugTriage, tileText.codeReview, tileText.featureWork])
+    await expect.poll(() => readCollectionOrder(electronApp, defaultProjectId)).toEqual(['bug-triage', 'code-review', 'feature-work', routineId])
+    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.bugTriage, tileText.codeReview, tileText.featureWork, tileText.routines])
     await expect(getTileDropIndicator(mainWindow)).toHaveCount(0)
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['New Tab'])
 
-    // In Harbor API's unfilled row, the empty cell after the last tile marks that tile's right side.
-    await beginPointerDrag(mainWindow, 'new-tab-collection-endpoint-tests')
-    /** First Harbor API tile, whose offset to the next tile gives the column pitch. */
-    const endpointTestsBox = (await mainWindow.getByTestId('new-tab-collection-endpoint-tests').boundingBox())!
-    /** Last Harbor API tile, whose row's third cell is empty. */
-    const releaseNotesBox = (await mainWindow.getByTestId('new-tab-collection-release-notes').boundingBox())!
-    await mainWindow.mouse.move(
-      releaseNotesBox.x + (releaseNotesBox.x - endpointTestsBox.x) + releaseNotesBox.width / 2,
-      releaseNotesBox.y + releaseNotesBox.height / 2,
-      { steps: 12 }
-    )
-    await expectTileDropIndicator(mainWindow, 'release-notes', 'right', false)
+    // The empty cell beside My Routines on the second row targets the end of the project.
+    await beginPointerDrag(mainWindow, 'new-tab-collection-feature-work')
+    /** The empty cell starts one column to the right of the last tile. */
+    const lastBox = (await mainWindow.getByTestId(`new-tab-collection-${routineId}`).boundingBox())!
+    await mainWindow.mouse.move(lastBox.x + lastBox.width * 1.5, lastBox.y + lastBox.height / 2, { steps: 12 })
+    await expectTileDropIndicator(mainWindow, routineId, 'right', false)
     await finishActiveDrag(mainWindow)
-    await expect.poll(() => readCollectionOrder(electronApp, harborProjectId)).toEqual(['release-notes', 'endpoint-tests'])
-    await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.releaseNotes, tileText.endpointTests])
+    await expect.poll(() => readCollectionOrder(electronApp, defaultProjectId)).toEqual(['bug-triage', 'code-review', routineId, 'feature-work'])
+
   })
 
   test('snaps a dragged tile to the nearest line in the row nearest the pointer, up to 100px outside its grid', async ({ electronApp, testSetup }) => {
@@ -605,7 +617,9 @@ describe('New Tab Screen', () => {
     const checklistBox = (await mainWindow.getByTestId('new-tab-collection-release-checklist').boundingBox())!
     /** Release Builds, last in the first row and at the grid's right edge. */
     const buildsBox = (await mainWindow.getByTestId('new-tab-collection-release-builds').boundingBox())!
-    /** Crash Reports, alone in the second row. */
+    /** The routine starter is the last tile on the second row. */
+    const routineId = (await readCollectionOrder(electronApp, lanternProjectId))!.at(-1)!
+    /** Crash Reports starts the second row. */
     const crashBox = (await mainWindow.getByTestId('new-tab-collection-crash-reports').boundingBox())!
     /** Vertical middles of the grid's two rows. */
     const firstRowY = buildsBox.y + buildsBox.height / 2
@@ -623,11 +637,11 @@ describe('New Tab Screen', () => {
     // The second row's empty third cell is nearer the line on Release Builds' left than either of Crash Reports' lines,
     // but it is in the second row, so it marks the line after Crash Reports.
     await mainWindow.mouse.move(buildsBox.x + buildsBox.width / 2, secondRowY, { steps: 12 })
-    await expectTileDropIndicator(mainWindow, 'crash-reports', 'right', false)
+    await expectTileDropIndicator(mainWindow, routineId, 'right', false)
 
     // 60px below the grid still snaps to the line after Crash Reports, but 120px below it there is no line.
     await mainWindow.mouse.move(buildsBox.x + buildsBox.width / 2, crashBox.y + crashBox.height + 60, { steps: 12 })
-    await expectTileDropIndicator(mainWindow, 'crash-reports', 'right', false)
+    await expectTileDropIndicator(mainWindow, routineId, 'right', false)
     await mainWindow.mouse.move(buildsBox.x + buildsBox.width / 2, crashBox.y + crashBox.height + 120, { steps: 12 })
     await expect(getTileDropIndicator(mainWindow)).toHaveCount(0)
 
@@ -639,9 +653,9 @@ describe('New Tab Screen', () => {
     await expectTileDropIndicator(mainWindow, 'crash-reports', 'left', false)
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readCollectionOrder(electronApp, lanternProjectId))
-      .toEqual(['offline-sync', 'release-builds', 'release-checklist', 'crash-reports'])
+      .toEqual(['offline-sync', 'release-builds', 'release-checklist', 'crash-reports', routineId])
     await expect(getTiles(mainWindow, lanternProjectId))
-      .toHaveText([/Offline Sync/, /Release Builds/, /Release Checklist/, /Crash Reports/])
+      .toHaveText([/Offline Sync/, /Release Builds/, /Release Checklist/, /Crash Reports/, tileText.routines])
   })
 
   test('reorders filtered projects and collections right after the visible item before them', async ({ electronApp, testSetup }) => {
@@ -651,6 +665,8 @@ describe('New Tab Screen', () => {
     const mainWindow = await openNewTab(electronApp, testSetup, createLanternFiles(lanternCollections))
     await expectSectionNames(mainWindow, ['Harbor API', 'Default Project', 'Lantern Mobile'])
 
+    /** Search hides the migrated routine, whose position must survive both drops. */
+    const routineId = (await readCollectionOrder(electronApp, lanternProjectId))!.at(-1)!
     // The search hides Default Project between the other two, and Offline Sync between Lantern Mobile's release tiles.
     await mainWindow.getByTestId('new-tab-search-input').fill('release')
     await expectSectionNames(mainWindow, ['Harbor API', 'Lantern Mobile'])
@@ -677,7 +693,7 @@ describe('New Tab Screen', () => {
     await moveActiveDragToTarget(mainWindow, collectionTileSelector('release-builds'), 'center', 'right')
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readCollectionOrder(electronApp, lanternProjectId))
-      .toEqual(['offline-sync', 'release-builds', 'release-checklist'])
+      .toEqual(['offline-sync', 'release-builds', 'release-checklist', routineId])
     await expect(getTiles(mainWindow, lanternProjectId)).toHaveText([/Release Builds/, /Release Checklist/])
 
     // Dragging it back to the start of the visible tiles saves it first, ahead of the hidden Offline Sync.
@@ -685,11 +701,11 @@ describe('New Tab Screen', () => {
     await moveActiveDragToTarget(mainWindow, collectionTileSelector('release-builds'), 'center', 'left')
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readCollectionOrder(electronApp, lanternProjectId))
-      .toEqual(['release-checklist', 'offline-sync', 'release-builds'])
+      .toEqual(['release-checklist', 'offline-sync', 'release-builds', routineId])
 
     // Clearing the search shows the hidden items where the saved orders put them.
     await mainWindow.getByTestId('new-tab-search-input').fill('')
     await expectSectionNames(mainWindow, ['Harbor API', 'Default Project', 'Lantern Mobile'])
-    await expect(getTiles(mainWindow, lanternProjectId)).toHaveText([/Release Checklist/, /Offline Sync/, /Release Builds/])
+    await expect(getTiles(mainWindow, lanternProjectId)).toHaveText([/Release Checklist/, /Offline Sync/, /Release Builds/, tileText.routines])
   })
 })

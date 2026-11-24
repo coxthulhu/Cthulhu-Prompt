@@ -31,6 +31,7 @@ import {
 import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   createPromptStatusFolderLayouts,
+  getCollectionContentKind,
   type PromptCollection
 } from '@shared/domain/prompt-collection/PromptCollection'
 import {
@@ -116,7 +117,7 @@ const createCollection = (
         : [
             {
               categoryId,
-              entries: entryId ? [{ kind, id: entryId }] : []
+              entries: entryId ? [{ kind: getCollectionContentKind(kind), id: entryId }] : []
             }
           ])
     ]

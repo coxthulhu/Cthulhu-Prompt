@@ -123,7 +123,7 @@ export const migrateTabSession = (workspaceId: string, collections: PromptCollec
         view.contentOwnerId = selection?.selectedScreen === 'project' && selection.selectedScreenData.promptCollectionId === collection.id
           ? selection.selectedScreenData.contentOwnerId : collection.id
         view.selectedEntryId = WorkspaceStateDataAccess.read(workspaceId, 'collection-user', view.contentOwnerId ?? collection.id)?.selectedEntryId ?? 'collection-header'
-        for (const contentId of getMarkdownContentIds(collection, collection.kind)) {
+        for (const contentId of getMarkdownContentIds(collection)) {
           /** Cursor and internal editor viewport retained from the old persistence system. */
           const editor = WorkspaceStateDataAccess.read(workspaceId, 'markdown-editor', contentId)
           if (editor) view.editorViewStates[contentId] = editor.editorViewStateJson

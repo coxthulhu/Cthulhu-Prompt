@@ -52,9 +52,9 @@ export const getStandaloneNoteIds = (collection: PromptCollection): string[] =>
 /** Returns standalone notes and attachments belonging to one collection. */
 export const getCollectionNoteIds = (state: DomainState, collection: PromptCollection): string[] => [
   ...getStandaloneNoteIds(collection),
-  ...getMarkdownContentIds(collection, collection.kind).flatMap((id) => {
+  ...getMarkdownContentIds(collection).flatMap((id) => {
     /** Owner reference is the sole source of attachment membership. */
-    const owner = state.get(collection.kind === 'prompt' ? 'prompt' : 'promptTemplate', id)
+    const owner = state.get(collection.kind === 'template' ? 'promptTemplate' : 'prompt', id)
     return owner?.attachedNoteId ? [owner.attachedNoteId] : []
   })
 ]

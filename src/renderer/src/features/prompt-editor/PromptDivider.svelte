@@ -30,7 +30,7 @@
   }: {
     onAddPrompt?: () => void
     mode?: 'add' | 'separator'
-    contentLabel?: 'Prompt' | 'Template'
+    contentLabel?: 'Prompt' | 'Template' | 'Routine'
     disabled?: boolean
     /** Keeps the add button visible while retaining hover and focus colors. */
     revealed?: boolean

@@ -85,6 +85,8 @@
   type Props = {
     open?: boolean
     workspaceId: string | null
+    /** Identifies the item being copied in the picker instructions. */
+    itemLabel: 'prompt' | 'routine'
     selectedTemplates?: PromptTemplateReference[] | null
     mode?: TemplateDialogMode
     onselect: (templates: PromptTemplateReference[] | null) => void | Promise<void>
@@ -95,6 +97,7 @@
   let {
     open = $bindable(false),
     workspaceId,
+    itemLabel,
     selectedTemplates,
     mode = 'select',
     onselect,
@@ -189,8 +192,8 @@
   // Subtitle explains whether selection is staged or immediate.
   const dialogSubtitle = $derived(
     mode === 'select-and-copy'
-      ? 'Click a template to apply it and copy this prompt immediately.'
-      : 'Choose one template, or use the prompt exactly as written. Double-click an option to select it and copy the prompt.'
+      ? `Click a template to apply it and copy this ${itemLabel} immediately.`
+      : `Choose one template, or use the ${itemLabel} exactly as written. Double-click an option to select it and copy the ${itemLabel}.`
   )
   // Shared row control switches from single-choice markers to copy glyphs in quick mode.
   const selectionControl = $derived(mode === 'select-and-copy' ? 'copy' : 'radio')
@@ -416,7 +419,7 @@
         <IconCell icon={Ban} variant="standard" class="prompt-template-no-template-icon" />
         <span class="prompt-template-no-template-copy">
           <strong class="text-sm font-semibold">{NO_TEMPLATE_LABEL}</strong>
-          <small class="text-xs">Use the prompt exactly as written</small>
+          <small class="text-xs">Use the {itemLabel} exactly as written</small>
         </span>
         <SelectionIndicator
           control={selectionControl}

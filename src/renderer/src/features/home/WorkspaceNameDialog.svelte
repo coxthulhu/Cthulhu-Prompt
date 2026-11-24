@@ -131,7 +131,7 @@
         <TitleSubtitleStack class="mb-[7px]">
           <Title title="Add Examples" variant="small" />
           <Subtitle
-            text="Include example prompts and templates in the My Prompts and My Templates collections."
+            text="Include example prompts, templates, and routines in the starter collections."
           />
         </TitleSubtitleStack>
         <ToggleButton

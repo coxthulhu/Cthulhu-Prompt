@@ -9,7 +9,6 @@
 
   type Props = Omit<
     ComponentProps<typeof MarkdownContentEditor>,
-    | 'contentKind'
     | 'contentLabel'
     | 'metadataTemplateLabel'
     | 'metadataTemplateState'
@@ -24,14 +23,19 @@
     | 'onTextChange'
   >
 
-  let { promptId, ...props }: Props = $props()
+  let { promptId, contentKind = 'prompt', ...props }: Props = $props()
 </script>
 
 <MarkdownContentEditor
   {...props}
   {promptId}
-  contentKind="prompt"
-  contentLabel="prompt"
+  {contentKind}
+  contentLabel={contentKind}
+  copyLabel={`Copy ${contentKind}`}
+  copyTitle={`Copy ${contentKind}`}
+  deleteLabel={`Delete ${contentKind}`}
+  deleteDialogTitle={contentKind === 'routine' ? 'Delete Routine' : 'Delete Prompt'}
+  deleteDialogDescription={`Are you sure you want to permanently delete this ${contentKind}?`}
   metadataTemplateLabel={props.promptDraftRecord.templateName ?? TEMPLATE_NOT_SELECTED_LABEL}
   metadataTemplateState={props.promptDraftRecord.templateState ?? 'not-selected'}
   onTitleChange={(title) => setPromptTitle(promptId, title)}

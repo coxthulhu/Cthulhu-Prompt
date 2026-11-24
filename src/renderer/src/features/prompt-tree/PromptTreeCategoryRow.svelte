@@ -38,7 +38,7 @@
     endsVisibleBranch?: boolean
     showActions?: boolean
     /** Singular content label used by this category's add action. */
-    contentLabel?: 'Prompt' | 'Template'
+    contentLabel?: 'Prompt' | 'Template' | 'Routine'
     /** Whether the category add action is waiting for persistence. */
     isAddToTopDisabled?: boolean
     // Gives picker reuse rounded rows without changing the sidebar tree.

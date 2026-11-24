@@ -310,7 +310,7 @@ export const planCreateCategoryDomainMutation: DomainPlanner<
       entityType: 'promptCollection',
       id: promptCollection.id,
       recipe: (draft) => {
-        if (draft.kind === 'template') {
+        if (draft.kind !== 'prompt') {
           draft.statusFolders.active.categoryOrder = insertCategoryOrderGroup(draft.statusFolders.active.categoryOrder, category.id)
           return
         }
@@ -464,7 +464,7 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
       entityType: 'promptCollection',
       id: promptCollection.id,
       recipe: (draft) => {
-        if (draft.kind === 'template') {
+        if (draft.kind !== 'prompt') {
           draft.statusFolders.active.categoryOrder = applyManagedCategoryOrderChanges(
             draft.statusFolders.active.categoryOrder,
             deletedCategoryIds,
@@ -608,7 +608,7 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
       entityType: 'promptCollection',
       id: owningCollection.id,
       recipe: (draft) => {
-        if (draft.kind === 'template') {
+        if (draft.kind !== 'prompt') {
           draft.statusFolders.active.categoryOrder = deleteCategoryOrderGroup(
             draft.statusFolders.active.categoryOrder,
             command.categoryId
@@ -752,7 +752,7 @@ export const planMoveCategoryDomainMutation: DomainPlanner<MoveCategoryDomainCom
 
   /** Category order selected by the template collection or prompt status-folder identity. */
   const currentCategoryOrder =
-    promptCollection.kind === 'template'
+    promptCollection.kind !== 'prompt'
       ? command.statusFolderId === null
         ? promptCollection.statusFolders.active.categoryOrder
         : null
@@ -778,7 +778,7 @@ export const planMoveCategoryDomainMutation: DomainPlanner<MoveCategoryDomainCom
         entityType: 'promptCollection',
         id: command.promptCollectionId,
         recipe: (draft) => {
-          if (draft.kind === 'template') {
+          if (draft.kind !== 'prompt') {
             draft.statusFolders.active.categoryOrder = categoryOrder
           } else if (command.statusFolderId !== null) {
             /** Ordered draft layout selected by the validated command identity. */

@@ -1,3 +1,4 @@
+import { findCollection } from '../helpers/WorkspaceDatabaseHelpers'
 import { runSqlQuery } from '../helpers/UserPersistenceHelpers'
 import { readTabSession, readWorkspaceCollectionOrder } from '../helpers/UserPersistenceHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
@@ -194,7 +195,7 @@ describe('Home Screen', () => {
       const promptCollectionStat = mainWindow.locator(
         '[data-testid="home-prompt-collection-count-stat"]'
       )
-      await expect(promptCollectionStat.locator('strong')).toHaveText('2')
+      await expect(promptCollectionStat.locator('strong')).toHaveText('3')
       await expect(promptCollectionStat).toContainText('Prompt Collections')
     })
 
@@ -261,7 +262,8 @@ describe('Home Screen', () => {
       ).toHaveCount(0)
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
       expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath))).toBe(false)
-      expect(await readWorkspaceCollectionOrder(electronApp, workspacePath)).toEqual({ entries: [{ kind: 'collection', id: 'collection-examples' }] })
+      expect(await readWorkspaceCollectionOrder(electronApp, workspacePath)).toEqual({ entries: [{ kind: 'collection', id: 'collection-examples' },
+        { kind: 'collection', id: (await findCollection(electronApp, 'MyRoutines', 'routine'))!.id }] })
     })
 
     test('shows create dialog for empty directory creation and completes setup', async ({
@@ -277,9 +279,9 @@ describe('Home Screen', () => {
       const setupResult = await testHelpers.createWorkspaceViaUI()
       expect(setupResult.setupDialogAppeared).toBe(true)
       expect(setupResult.workspaceReady).toBe(true)
-      /** Default collection tabs must appear without manually navigating to either collection. */
+      /** All three collection tabs open as part of workspace creation. */
       const tabs = mainWindow.getByTestId('work-tab').getByRole('tab')
-      await expect(tabs).toHaveText(['My Prompts', 'My Templates'])
+      await expect(tabs).toHaveText(['My Prompts', 'My Templates', 'My Routines'])
       await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true')
       await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
       await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Active')
@@ -287,7 +289,7 @@ describe('Home Screen', () => {
       // The newly created session survives a reload with the same selected collection.
       await mainWindow.reload()
       await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
-      await expect(tabs).toHaveText(['My Prompts', 'My Templates'])
+      await expect(tabs).toHaveText(['My Prompts', 'My Templates', 'My Routines'])
       await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true')
       await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
       await testHelpers.navigateToHomeScreen()
@@ -301,15 +303,15 @@ describe('Home Screen', () => {
       await tabs.nth(1).click()
       await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Templates')
       await mainWindow.getByTestId('work-tab-close').nth(0).press('Enter')
-      await expect(tabs).toHaveText(['My Templates'])
+      await expect(tabs).toHaveText(['My Templates', 'My Routines'])
       await expect.poll(async () => {
-        /** Observe the saved single-tab session before reloading the renderer. */
+        /** Observe the saved two remaining tabs before reloading the renderer. */
         const saved = (await readTabSession(electronApp, workspaceId)).user
         return [saved?.tabs.length, saved?.selectedTabId === saved?.tabs[0]?.id]
-      }).toEqual([1, true])
+      }).toEqual([2, true])
       await mainWindow.reload()
       await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
-      await expect(tabs).toHaveText(['My Templates'])
+      await expect(tabs).toHaveText(['My Templates', 'My Routines'])
       await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true')
       await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Templates')
     })
@@ -346,7 +348,7 @@ describe('Home Screen', () => {
       )
     })
 
-    test('adds example prompts and templates when setting up a new workspace', async ({
+    test('adds examples to all three starter collections when setting up a new workspace', async ({
       testSetup
     }) => {
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -369,7 +371,7 @@ describe('Home Screen', () => {
         mainWindow.locator('[data-testid="create-workspace-submit-button"]')
       ).toBeEnabled()
       await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-      await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates'])
+      await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates', 'My Routines'])
       await expect(mainWindow.getByTestId('work-tab').getByRole('tab').nth(0)).toHaveAttribute('aria-selected', 'true')
       await mainWindow.waitForSelector('[data-testid="prompt-collection-screen"]', {
         state: 'visible',
@@ -448,11 +450,14 @@ describe('Home Screen', () => {
       await categoryToggles.nth(1).click()
       await expect(mainWindow.locator('[data-testid^="prompt-tree-active-prompt-"]')).toHaveCount(0)
 
-      // The default project lists both kinds together in combined alphabetical order.
+      // The default project lists its starter libraries in tab order.
       await mainWindow.locator('[data-testid="sidebar-show-all-button"]').click()
       await expect(
         mainWindow.locator('[data-testid^="new-tab-collection-"]')
-      ).toHaveCount(2)
+      ).toHaveCount(3)
+      await expect(
+        mainWindow.locator('[data-testid^="new-tab-collection-"]').nth(2)
+      ).toHaveText(/My Routines\s*1 routine/)
       await expect(
         mainWindow.locator('[data-testid^="new-tab-collection-"]').nth(0)
       ).toContainText('My Prompts')
@@ -474,6 +479,8 @@ describe('Home Screen', () => {
         'Example: Q&A with Implementation & Testing',
         'Example: Bug Fix Template'
       ])
+      await mainWindow.getByRole('tab', { name: 'My Routines', exact: true }).click()
+      await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Update the Changelog')
     })
 
     test('creates a blank My Prompts collection when examples are disabled', async ({ testSetup }) => {
@@ -496,7 +503,7 @@ describe('Home Screen', () => {
       await expect(includeExamplesToggle).toHaveAttribute('aria-pressed', 'false')
 
       await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-      await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates'])
+      await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates', 'My Routines'])
       await expect(mainWindow.getByTestId('work-tab').getByRole('tab').nth(0)).toHaveAttribute('aria-selected', 'true')
       await mainWindow.waitForSelector('[data-testid="prompt-collection-screen"]', {
         state: 'visible',
@@ -514,11 +521,14 @@ describe('Home Screen', () => {
       expect(screenInfo.hasPromptEditors).toBe(false)
       expect(screenInfo.promptCount).toBe(0)
 
-      // The default project lists both kinds together in combined alphabetical order.
+      // The default project lists its starter libraries in tab order.
       await mainWindow.locator('[data-testid="sidebar-show-all-button"]').click()
       await expect(
         mainWindow.locator('[data-testid^="new-tab-collection-"]')
-      ).toHaveCount(2)
+      ).toHaveCount(3)
+      await expect(
+        mainWindow.locator('[data-testid^="new-tab-collection-"]').nth(2)
+      ).toHaveText(/My Routines\s*0 routines/)
       await expect(
         mainWindow.locator('[data-testid^="new-tab-collection-"]').nth(0)
       ).toContainText('My Prompts')

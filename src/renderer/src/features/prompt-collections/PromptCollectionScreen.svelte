@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { collectionItemLabel } from '@shared/domain/prompt-collection/PromptCollection'
   import { onDestroy } from 'svelte'
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
   import PromptCollectionHeaderBar from './PromptCollectionHeaderBar.svelte'
@@ -146,10 +147,10 @@
         {#if controller.errorMessage}
           <div class="h-full min-h-0 overflow-y-auto pt-6 pl-6">
             <h2 class="text-lg font-semibold mb-4">
-              {controller.contentKind === 'template' ? 'Templates' : 'Prompts'} ({controller.visiblePromptIds.length})
+              {collectionItemLabel[controller.contentKind]}s ({controller.visiblePromptIds.length})
             </h2>
             <p class="mt-6 text-red-500">
-              Error loading {controller.contentKind === 'template' ? 'templates' : 'prompts'}:
+              Error loading {controller.contentKind}s:
               {controller.errorMessage}
             </p>
           </div>

@@ -1,7 +1,7 @@
 import type { AuthoritativeSnapshotQueryResult } from '@shared/ipc/AuthoritativeSnapshot'
 
 /** Screens a work tab can show; each one selects the tab's icon. */
-export const WORK_TAB_SCREENS = ['new-tab', 'prompt-collection', 'template-collection'] as const
+export const WORK_TAB_SCREENS = ['new-tab', 'prompt-collection', 'template-collection', 'routine-collection'] as const
 
 /** Screen currently shown by a work tab. */
 export type WorkTabScreen = (typeof WORK_TAB_SCREENS)[number]

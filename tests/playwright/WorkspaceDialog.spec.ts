@@ -57,7 +57,7 @@ describe('Managed workspace databases', () => {
     await mainWindow.reload()
     await expect(mainWindow.getByTestId('workspace-ready-path')).toHaveText(renamed)
     expect(await workspaceIdentity()).toBe(originalId)
-    await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates', 'New Tab'])
+    await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates', 'My Routines', 'New Tab'])
     await mainWindow.getByRole('tab', { name: 'My Prompts', exact: true }).click()
     await expect(mainWindow.getByTestId('prompt-title').first()).toHaveValue('Keep this edit')
   })
