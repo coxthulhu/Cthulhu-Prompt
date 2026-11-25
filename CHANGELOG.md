@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.39
+
+### Changes
+
+- List Template Collection last in the Create Collection dialog, after Prompt and Routine collections.
+- Updated Lucide icons to the Svelte 5 package.
+- Create the GitHub release draft before uploading installers, and verify that both installers and the auto-update files were uploaded before publishing.
+
 ## 0.0.38
 
 ### New Features
