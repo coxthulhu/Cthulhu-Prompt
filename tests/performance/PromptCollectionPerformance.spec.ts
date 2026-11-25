@@ -3,7 +3,7 @@ import { createCollectionViewState } from '@shared/domain/ui-state/TabSession'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { PROMPT_COLLECTION_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptCollectionSelectors'
+import { PROMPT_COLLECTION_HOST_SELECTOR, PROMPT_EDITOR_PREFIX_SELECTOR, promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 import { getElementScrollTop } from '../helpers/VirtualWindowHelpers'
 import { seedWindowPersistence, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 import {
@@ -21,7 +21,8 @@ import {
 
 const { test, describe, expect } = createPlaywrightTestSuite({ electronArgs: PERFORMANCE_ELECTRON_ARGS })
 
-/** Switches between Home and four large collection tabs, first opening and then returning to each. */
+/** Switches between Home and four large collection tabs, first opening and then returning to each, then switches
+    directly between the tabs and opens a collection from a new tab. */
 const HOME_COLLECTION_SWITCHING = 'home-collection-switching'
 /** Scrolls three freshly opened task collections, each at a different wheel cadence. */
 const PROMPT_COLLECTION_SCROLLING = 'prompt-collection-scrolling'
@@ -43,6 +44,10 @@ const CYCLES = 2
 const HOME_READY_SELECTOR = '[data-testid="home-screen"]'
 /** A hydrated editor inside the virtual window, since a returning collection briefly mounts without rows or overlay. */
 const COLLECTION_READY_SELECTOR = `${PROMPT_COLLECTION_HOST_SELECTOR} .monaco-editor`
+/** A prompt row in the virtual window, shown as a placeholder or an editor. */
+const COLLECTION_CONTENT_SELECTOR = `${PROMPT_COLLECTION_HOST_SELECTOR} ${PROMPT_EDITOR_PREFIX_SELECTOR}`
+/** Element that marks the New Tab screen as mounted. */
+const NEW_TAB_READY_SELECTOR = '[data-testid="new-tab-screen"]'
 /** Subjects varied per prompt so each Monaco model tokenizes different text. */
 const AREAS = ['billing', 'search', 'auth', 'editor', 'sync', 'reports', 'uploads', 'settings']
 
@@ -94,19 +99,38 @@ const createWorkspaceFiles = (collections: typeof COLLECTIONS) =>
     })
   })))
 
-/** Measures each tab's first open and cached return, alternating with Home. */
+/** Measures each tab's first open and cached return, alternating with Home, then cached returns from one tab to the
+    next and opening a collection from a new tab. */
 const measureSwitches = async (page: Page, tabs: Locator): Promise<MeasurementResult[]> => {
-  /** Ordered samples for the two Home-to-collection cycles. */
+  /** Ordered samples for the two Home-to-collection cycles, the tab cycle, and the New Tab steps. */
   const transitions: MeasurementResult[] = []
   for (let cycle = 1; cycle <= CYCLES; cycle += 1) {
     for (const [index, collection] of COLLECTIONS.entries()) {
       transitions.push(await measureTransition(page,
         `Cycle ${cycle}: Home → ${collection.name}${cycle === 1 ? ' (first open)' : ''}`,
-        COLLECTION_READY_SELECTOR, tabs.nth(index)))
+        COLLECTION_READY_SELECTOR, tabs.nth(index), COLLECTION_CONTENT_SELECTOR))
       transitions.push(await measureTransition(page, `Cycle ${cycle}: ${collection.name} → Home`,
         HOME_READY_SELECTOR, page.getByTestId('nav-button-home')))
     }
   }
+
+  /** Last collection, where the tab cycle starts so every tab is entered from another tab. */
+  const lastCollection = COLLECTIONS[COLLECTIONS.length - 1]
+  // Unrecorded: Home to the last tab duplicates a Cycle 2 return, but still waits for readiness and the settle.
+  await measureTransition(page, `Position: Home → ${lastCollection.name}`, COLLECTION_READY_SELECTOR,
+    tabs.nth(COLLECTIONS.length - 1), COLLECTION_CONTENT_SELECTOR)
+  /** Collection shown before each tab-to-tab return. */
+  let previous = lastCollection.name
+  for (const [index, collection] of COLLECTIONS.entries()) {
+    transitions.push(await measureTransition(page, `Tab cycle: ${previous} → ${collection.name}`,
+      COLLECTION_READY_SELECTOR, tabs.nth(index), COLLECTION_CONTENT_SELECTOR))
+    previous = collection.name
+  }
+  transitions.push(await measureTransition(page, `${previous} → New Tab`, NEW_TAB_READY_SELECTOR,
+    page.getByTestId('new-tab-button')))
+  // The New Tab screen opens a collection that another tab already shows as an independent view.
+  transitions.push(await measureTransition(page, `New Tab → open ${COLLECTIONS[0].name}`, COLLECTION_READY_SELECTOR,
+    page.getByTestId(`new-tab-collection-${COLLECTIONS[0].id}`), COLLECTION_CONTENT_SELECTOR))
   return transitions
 }
 

@@ -9,6 +9,12 @@ type FrameSample = {
   elapsedMs: number
   /** Virtual collection offset in the final sampled frame, measured from the verified top. */
   scrollDistancePx?: number
+  /** Navigation only: press to the end of the next paint after the gesture's handlers, from Event Timing; 16 means at
+      most 16. */
+  inputToPaintMs?: number
+  /** Navigation only: press to the start of the frame after the first one whose DOM held the destination's content,
+      which bounds when that content was painted, before hydration completes. */
+  contentMs?: number
   frameIntervalsMs: number[]
   longAnimationFrames: Array<{ startTime: number; duration: number; blockingDuration: number }>
 }
@@ -18,7 +24,7 @@ declare global {
     /** In-page frame tracker installed by installFrameTracker. */
     performanceTracker: {
       isReady: (selector: string) => boolean
-      arm: (label: string, until: string | number) => void
+      arm: (label: string, until: string | number, contentSelector?: string) => void
       result: () => Promise<FrameSample>
     }
   }
@@ -121,12 +127,18 @@ export const installFrameTracker = async (page: Page): Promise<void> => {
     let frameTimes: number[] = []
     /** Long animation frames reported since the last completed transition. */
     let longFrames: FrameSample['longAnimationFrames'] = []
+    /** Interaction events reported since the current sample was armed. */
+    let interactionEvents: Array<{ startTime: number; end: number }> = []
     /** Resolves with the armed measurement even if it finishes before the driver reads it. */
     let result: Promise<FrameSample>
     /** Input and end condition for the current sample. */
     let pending: {
       label: string
       until: string | number
+      /** Navigation content whose first frame is timed, or null for scrolling. */
+      contentSelector: string | null
+      contentSeen: boolean
+      contentTime: number | null
       startTime: number | null
       endTime: number | null
       resolve: (sample: FrameSample) => void
@@ -143,6 +155,16 @@ export const installFrameTracker = async (page: Page): Promise<void> => {
     const observer = new PerformanceObserver((list) => collectLongFrames(list.getEntries()))
     observer.observe({ type: 'long-animation-frame' })
 
+    /** Copies interaction events, whose durations end at the next paint after their handlers. */
+    const collectInteractionEvents = (entries: PerformanceEntry[]): void => {
+      for (const entry of entries as PerformanceEventTiming[]) {
+        if (entry.interactionId) interactionEvents.push({ startTime: entry.startTime, end: entry.startTime + entry.duration })
+      }
+    }
+    /** Observer whose buffered events can be drained before resolving a navigation sample. */
+    const eventObserver = new PerformanceObserver((list) => collectInteractionEvents(list.getEntries()))
+    eventObserver.observe({ type: 'event', durationThreshold: 16 } as PerformanceObserverInit)
+
     /** Ready once the destination's element is mounted, the loading overlay is gone, and every editor is built. */
     const isReady = (readySelector: string): boolean =>
       document.querySelector(readySelector) !== null &&
@@ -156,6 +178,11 @@ export const installFrameTracker = async (page: Page): Promise<void> => {
       if (pending && pending.startTime !== null) {
         /** Navigation includes the existing post-load settle. Scrolling samples only the wheel gesture. */
         const scrolling = typeof pending.until === 'number'
+        // The frame after the content first appears starts once the frame that painted it has finished.
+        if (pending.contentSelector !== null && pending.contentTime === null && pending.contentSeen) pending.contentTime = time
+        if (pending.contentSelector !== null && !pending.contentSeen && document.querySelector(pending.contentSelector) !== null) {
+          pending.contentSeen = true
+        }
         if (pending.endTime === null && (typeof pending.until === 'number'
           ? time - pending.startTime >= pending.until
           : isReady(pending.until))) {
@@ -164,7 +191,7 @@ export const installFrameTracker = async (page: Page): Promise<void> => {
         }
         if (pending.endTime !== null && time >= pending.endTime + (scrolling ? 0 : settleMs)) {
           /** Completed sample boundaries in the renderer clock. */
-          const { startTime, endTime, resolve } = pending
+          const { startTime, endTime, contentTime, resolve } = pending
           pending = null
           /** Snapshot distance and frame intervals at the same cutoff. */
           const scrollDistancePx = scrolling
@@ -175,8 +202,15 @@ export const installFrameTracker = async (page: Page): Promise<void> => {
           /** Chromium publishes a long-frame entry after its rendering work completes. */
           const finish = (): void => {
             collectLongFrames(observer.takeRecords())
+            collectInteractionEvents(eventObserver.takeRecords())
+            /** Paint ends of this gesture's events: the press, its release, and the click. */
+            const gestureEnds = interactionEvents
+              .filter((event) => event.startTime >= startTime - 1 && event.startTime < endTime)
+              .map((event) => event.end - startTime)
+            interactionEvents = []
             resolve({
               elapsedMs: endTime - startTime, scrollDistancePx, frameIntervalsMs,
+              ...(scrolling ? {} : { inputToPaintMs: Math.max(16, ...gestureEnds), contentMs: (contentTime ?? endTime) - startTime }),
               longAnimationFrames: longFrames.filter((frame) => frame.startTime + frame.duration > startTime && frame.startTime < time)
             })
             longFrames = []
@@ -191,9 +225,13 @@ export const installFrameTracker = async (page: Page): Promise<void> => {
 
     window.performanceTracker = {
       isReady,
-      arm(label, until) {
+      arm(label, until, contentSelector) {
+        interactionEvents = []
         result = new Promise((resolve) => {
-          pending = { label, until, startTime: null, endTime: null, resolve }
+          pending = {
+            label, until, contentSelector: contentSelector ?? null, contentSeen: false, contentTime: null,
+            startTime: null, endTime: null, resolve
+          }
         })
         // Keep the frame containing the first input and exclude setup frames.
         addEventListener(typeof until === 'number' ? 'wheel' : 'pointerdown', (event) => {
@@ -234,15 +272,22 @@ const summarizeFrames = (label: string, { frameIntervalsMs, longAnimationFrames 
   }))
 })
 
-/** Measures from the tab press until the settle after the destination becomes ready. */
+/** Measures from the press until the settle after the destination becomes ready, timing when its content first
+    appears, which defaults to readiness. */
 export const measureTransition = async (
-  page: Page, label: string, readySelector: string, target: Locator
+  page: Page, label: string, readySelector: string, target: Locator, contentSelector = readySelector
 ): Promise<MeasurementResult> => {
-  await page.evaluate(({ label, readySelector }) => window.performanceTracker.arm(label, readySelector), { label, readySelector })
+  await page.evaluate(({ label, readySelector, contentSelector }) =>
+    window.performanceTracker.arm(label, readySelector, contentSelector), { label, readySelector, contentSelector })
   await target.click()
   /** Renderer frames and time to readiness for this transition. */
   const sample = await page.evaluate(() => window.performanceTracker.result())
-  return { ...summarizeFrames(label, sample), readyMs: round(sample.elapsedMs) }
+  return {
+    ...summarizeFrames(label, sample),
+    inputToPaintMs: round(sample.inputToPaintMs!),
+    contentMs: round(sample.contentMs!),
+    readyMs: round(sample.elapsedMs)
+  }
 }
 
 /** Times ten seconds of 120-unit wheel input at the requested cadence over the collection. */
@@ -264,6 +309,8 @@ export const measureScrolling = async (
 
 /** Summary columns, each the median of the measured runs. */
 const SUMMARY_COLUMNS: Array<[string, keyof MeasurementResult]> = [
+  ['Press→paint ms', 'inputToPaintMs'],
+  ['Content ms', 'contentMs'],
   ['Ready ms', 'readyMs'],
   ['Scroll ms', 'scrollDurationMs'],
   ['Distance px', 'scrollDistancePx'],
