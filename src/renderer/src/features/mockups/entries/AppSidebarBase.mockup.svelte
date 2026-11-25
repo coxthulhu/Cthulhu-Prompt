@@ -2,8 +2,9 @@
   import {
     Archive, ArrowRight, ArrowUpToLine, Bug, Check, ChevronsDownUp, ChevronsUpDown,
     ChevronDown, ChevronUp, ChevronRight, CircleCheckBig, Clock, Download, ExternalLink, FileText, Folder, FolderCog, FolderOpen,
-    GripVertical, Home, Layers, ListTodo, MoreHorizontal, PanelsTopLeft, Plus, RefreshCw, Settings, Star, Trash2, X
-  } from 'lucide-svelte'
+    GripVertical, Home, Layers, ListTodo, MoreHorizontal, PanelsTopLeft, Plus, RefreshCw, Settings, Star, Trash2, X,
+    type LucideIcon
+  } from '@lucide/svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
 
   // Visual snapshot of AppSidebar, AppActivityBar, WorkspacePopup, PromptTree, and their controls.
@@ -14,7 +15,7 @@
   type MockGroup = {
     id: string
     label: string
-    icon: typeof Plus
+    icon: LucideIcon
     prompts: MockPrompt[]
     categories: MockCategory[]
     expanded: boolean

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Check } from 'lucide-svelte'
-  import { tick, type ComponentType, type Snippet } from 'svelte'
+  import { Check, type LucideIcon } from '@lucide/svelte'
+  import { tick, type Snippet } from 'svelte'
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import ManagementSelectorPanel, {
@@ -10,7 +10,7 @@
   /** Multi-item management dialog with a selector list and a batched Save Changes action. */
   type Props = {
     open?: boolean
-    icon: ComponentType
+    icon: LucideIcon
     title: string
     subtitle: string
     listLabel: string

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Pencil } from 'lucide-svelte'
+  import { Pencil } from '@lucide/svelte'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { renamePromptCollection } from '@renderer/data/Mutations/PromptCollectionMutations'
   import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'

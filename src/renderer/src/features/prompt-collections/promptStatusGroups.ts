@@ -1,4 +1,4 @@
-import { Archive, Check, CircleCheckBig, Clock, ListTodo } from 'lucide-svelte'
+import { Archive, Check, CircleCheckBig, Clock, ListTodo } from '@lucide/svelte'
 import { getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDERS, PromptStatusFolderId, type PromptContentStatus } from '@shared/domain/prompt/Prompt'
 
 import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'

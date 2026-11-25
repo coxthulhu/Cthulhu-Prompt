@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import type { ButtonAppearance } from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import '@renderer/common/cthulhu-ui/buttons/button.css'
@@ -9,8 +9,8 @@
   type Props = {
     href: string
     text: string
-    icon?: ComponentType
-    endIcon?: ComponentType
+    icon?: LucideIcon
+    endIcon?: LucideIcon
     variant?: LinkButtonVariant
     appearance?: ButtonAppearance
     /** Removes navigation and tab access while preserving link semantics. */

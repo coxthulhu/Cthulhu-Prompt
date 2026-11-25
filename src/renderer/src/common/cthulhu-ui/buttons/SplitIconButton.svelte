@@ -1,7 +1,6 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
   import type { Action } from 'svelte/action'
-  import { ChevronDown } from 'lucide-svelte'
+  import { ChevronDown, type LucideIcon } from '@lucide/svelte'
   import DropdownPopupMoreOptions from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
   import type { DropdownPopupMoreOptionsItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
   import type { DropdownPopupMenuAlignment } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupCore.svelte'
@@ -18,7 +17,7 @@
 
   /** Main icon action paired with a separately triggered options menu. */
   type Props = {
-    icon: ComponentType
+    icon: LucideIcon
     label: string
     moreOptions: DropdownPopupMoreOptionsItem[]
     baseVariant?: IconButtonBaseVariant

@@ -1,6 +1,5 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
-  import { ChevronDown, ChevronUp } from 'lucide-svelte'
+  import { ChevronDown, ChevronUp } from '@lucide/svelte'
   import DropdownPopupMoreOptions from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
   import type { DropdownPopupMoreOptionsItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
   import '@renderer/common/cthulhu-ui/buttons/button.css'
@@ -42,7 +41,7 @@
 
   const selectedLabel = $derived(selectedItem.selectedLabel ?? selectedItem.label)
   const selectedItemLabel = $derived(`${label}: ${selectedLabel}`)
-  const SelectedIcon = $derived<ComponentType>(selectedItem.icon)
+  const SelectedIcon = $derived(selectedItem.icon)
 </script>
 
 <DropdownPopupMoreOptions

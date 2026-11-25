@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ExternalLink, FolderOpen } from 'lucide-svelte'
+  import { ExternalLink, FolderOpen } from '@lucide/svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import Row from '@renderer/common/cthulhu-ui/layout/Row.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'

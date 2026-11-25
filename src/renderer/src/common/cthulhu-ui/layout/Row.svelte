@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
@@ -10,7 +11,7 @@
 
   type Props = {
     variant?: 'default' | 'dialog-heading' | 'workspace'
-    icon?: ComponentType
+    icon?: LucideIcon
     label: string
     detail?: string
     wrapDetail?: boolean

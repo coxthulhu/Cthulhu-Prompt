@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { ChevronRight, GripVertical, Plus } from 'lucide-svelte'
-  import type { ComponentType } from 'svelte'
+  import { ChevronRight, GripVertical, Plus, type LucideIcon } from '@lucide/svelte'
   import type { Action } from 'svelte/action'
   import { flip } from 'svelte/animate'
   import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
@@ -15,7 +14,7 @@
   /** One selectable item rendered by a management dialog's navigation panel. */
   export type ManagementSelectorPanelItem = {
     id: string
-    icon: ComponentType
+    icon: LucideIcon
     text: string
     detail: string
   }

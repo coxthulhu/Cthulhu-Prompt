@@ -1,12 +1,12 @@
 <script module lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
 
   /** One choice: a header with an icon and label above a short bullet list. */
   export type OptionCardSelectorItem<Id extends string = string> = {
     id: Id
     label: string
     bullets: readonly string[]
-    icon: ComponentType
+    icon: LucideIcon
     testId?: string
   }
 </script>

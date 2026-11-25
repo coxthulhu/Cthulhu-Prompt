@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Copy } from 'lucide-svelte'
+  import { Copy } from '@lucide/svelte'
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
   import { setPromptTemplates } from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
   import {

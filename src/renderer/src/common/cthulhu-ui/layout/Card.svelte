@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import CardSurface from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
@@ -10,7 +11,7 @@
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     label: string
-    icon?: ComponentType
+    icon?: LucideIcon
     subtitle?: string
     children: Snippet
     surfaceClass?: string

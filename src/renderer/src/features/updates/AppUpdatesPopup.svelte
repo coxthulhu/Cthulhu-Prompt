@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronRight, Download, ExternalLink, RefreshCw, X } from 'lucide-svelte'
+  import { ChevronRight, Download, ExternalLink, RefreshCw, X } from '@lucide/svelte'
   import { APP_RELEASES_URL, type AppUpdateState } from '@shared/runtime/AppUpdates'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'

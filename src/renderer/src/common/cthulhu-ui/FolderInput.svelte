@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FolderOpen } from 'lucide-svelte'
+  import { FolderOpen } from '@lucide/svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'

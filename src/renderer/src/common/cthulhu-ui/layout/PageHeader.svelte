@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
@@ -8,7 +9,7 @@
   import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
 
   type Props = Omit<HTMLAttributes<HTMLDivElement>, 'title' | 'children'> & {
-    icon: ComponentType
+    icon: LucideIcon
     title: string
     subtitle: string
     titleTooltip?: string

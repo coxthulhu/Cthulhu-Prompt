@@ -1,12 +1,12 @@
 <script lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
-  import { Trash2 } from 'lucide-svelte'
+  import type { Snippet } from 'svelte'
+  import { Trash2, type LucideIcon } from '@lucide/svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import Row from '@renderer/common/cthulhu-ui/layout/Row.svelte'
 
   /** Heading, delete action, and fields for the selected draft of a management dialog. */
   type Props = {
-    icon: ComponentType
+    icon: LucideIcon
     label: string
     detail: string
     deleteLabel: string

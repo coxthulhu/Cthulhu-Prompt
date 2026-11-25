@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import { Folder, Settings } from 'lucide-svelte'
+  import { Folder, Settings } from '@lucide/svelte'
   import { STARTER_COLLECTION_KINDS } from '@shared/domain/prompt-collection/PromptCollection'
   import { getProjectInfoErrors, type ProjectInfo } from '@shared/domain/workspace/Project'
   import type { Workspace } from '@shared/domain/workspace/Workspace'

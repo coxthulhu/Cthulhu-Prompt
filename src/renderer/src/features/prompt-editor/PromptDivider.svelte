@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus } from 'lucide-svelte'
+  import { Plus } from '@lucide/svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import DropTarget, {
     type DropTargetState

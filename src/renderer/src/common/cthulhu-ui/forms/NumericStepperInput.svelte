@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Minus, Plus } from 'lucide-svelte'
+  import { Minus, Plus } from '@lucide/svelte'
   import type { HTMLInputAttributes } from 'svelte/elements'
   import type { WithElementRef } from '@renderer/common/cthulhu-ui/elementRef'
   import '@renderer/common/cthulhu-ui/buttons/button.css'

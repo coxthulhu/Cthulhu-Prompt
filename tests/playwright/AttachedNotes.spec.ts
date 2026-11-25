@@ -272,6 +272,7 @@ describe('Attached note editors', () => {
       await expect.poll(() => isMonacoEditorFocused(mainWindow, NOTE)).toBe(true)
       /** A visible blank note offers deletion as the main action instead of the dropdown. */
       await expect(owner.getByTestId('attached-note-button')).toHaveAttribute('aria-label', 'Delete attached note')
+      await expect(owner.getByTestId('attached-note-button').locator('svg.lucide-notebook-x path').first()).toBeVisible()
       await expect(owner.getByTestId('attached-note-options')).toBeDisabled()
       await expect(owner.getByTestId('attached-note-indicator')).toHaveAttribute('data-edited', 'false')
       /** Creation establishes the owner timestamp; text-only note edits must leave it alone. */

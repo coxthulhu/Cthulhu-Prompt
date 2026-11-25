@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Loader } from 'lucide-svelte'
+  import { Loader } from '@lucide/svelte'
   import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 

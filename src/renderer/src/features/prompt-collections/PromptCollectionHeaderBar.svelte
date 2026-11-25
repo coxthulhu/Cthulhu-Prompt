@@ -9,7 +9,7 @@
 
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import { Search } from 'lucide-svelte'
+  import { Search } from '@lucide/svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
 
   /** Fixed header shared by the collection and single-prompt screens: path, path actions, and Find. */

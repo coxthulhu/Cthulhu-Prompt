@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { GripVertical } from 'lucide-svelte'
+  import { GripVertical } from '@lucide/svelte'
   import type { Action } from 'svelte/action'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import { draggable, type DraggableOptions } from '@renderer/common/drag-drop/dragDrop.svelte.ts'

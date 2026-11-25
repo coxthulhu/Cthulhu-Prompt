@@ -1,11 +1,11 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
   import type { Action } from 'svelte/action'
   import {
     AlertCircle, ArrowRight, BookOpen, Check, ChevronRight, Clock, Database, ExternalLink, FileText,
     FolderKanban, FolderOpen, FolderPlus, Folders, HardDrive, Home, Import, Layers, LayoutGrid, Plus,
-    X, Zap
-  } from 'lucide-svelte'
+    X, Zap,
+    type LucideIcon
+  } from '@lucide/svelte'
 
   // Visual baseline of HomeScreen and its Welcome, Open Workspace, Create Workspace, and error dialogs.
   // Only Svelte, Lucide icons, and palette colors are shared with the application. The shell's
@@ -35,7 +35,7 @@
 
   type ActionButton = {
     text: string
-    icon?: ComponentType
+    icon?: LucideIcon
     variant?: 'neutral' | 'accent'
     appearance?: 'filled' | 'outline'
     disabled?: boolean
@@ -116,7 +116,7 @@
   /** Header and frame settings of each live dialog; the error title follows the failed action. */
   const dialogFrames: Record<
     DialogKind,
-    { icon: ComponentType; title: string; subtitle?: string; widthClass: string; scrollBody?: boolean }
+    { icon: LucideIcon; title: string; subtitle?: string; widthClass: string; scrollBody?: boolean }
   > = {
     welcome: {
       icon: BookOpen,
@@ -141,7 +141,7 @@
     error: { icon: AlertCircle, title: 'Failed to Open Workspace', widthClass: 'max-w-[576px]' }
   }
 
-  const welcomeSteps: Array<{ icon: ComponentType; title: string; badge?: string; description: string }> = [
+  const welcomeSteps: Array<{ icon: LucideIcon; title: string; badge?: string; description: string }> = [
     {
       icon: Home,
       title: 'Create a workspace',
@@ -359,7 +359,7 @@
   </button>
 {/snippet}
 
-{#snippet countDisplay(CountIcon: ComponentType, count: number, label: string, testId: string)}
+{#snippet countDisplay(CountIcon: LucideIcon, count: number, label: string, testId: string)}
   <span class="count-display text-sm leading-5" data-testid={testId}>
     <CountIcon class="shrink-0" size={18} aria-hidden="true" />
     <strong class="count-display-value text-base leading-6 font-semibold">{count}</strong>

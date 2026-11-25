@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronRight, Folder, FolderCog, Pencil } from 'lucide-svelte'
+  import { ChevronRight, Folder, FolderCog, Pencil } from '@lucide/svelte'
   import IconButtonBar from '@renderer/common/cthulhu-ui/buttons/IconButtonBar.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'

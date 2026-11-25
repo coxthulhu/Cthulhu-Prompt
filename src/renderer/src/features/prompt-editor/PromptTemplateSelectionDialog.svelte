@@ -4,7 +4,7 @@
   import { NO_TEMPLATE_LABEL } from '@renderer/common/emptyStateText'
   import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
   import { SvelteSet } from 'svelte/reactivity'
-  import { Ban, Check, Copy, FolderOpen, Layers } from 'lucide-svelte'
+  import { Ban, Check, Copy, FolderOpen, Layers } from '@lucide/svelte'
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'

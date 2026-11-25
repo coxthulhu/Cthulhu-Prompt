@@ -1,6 +1,5 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
-  import { Eye, EyeOff, NotebookPen } from 'lucide-svelte'
+  import { Eye, EyeOff, NotebookPen } from '@lucide/svelte'
   import NotebookX from './NotebookX.svelte'
   import SplitIconButton from '@renderer/common/cthulhu-ui/buttons/SplitIconButton.svelte'
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
@@ -28,12 +27,10 @@
   const label = $derived(
     !noteId ? 'Add attached note' : isDeleteDefaultAction ? 'Delete attached note' : visible ? 'Hide attached note' : 'Show attached note'
   )
-  /** Runes icon cast to the legacy class type that shared icon props still declare. */
-  const deleteNoteIcon = NotebookX as unknown as ComponentType
   /** Main icon matching the current main action. */
-  const mainIcon = $derived(!noteId ? NotebookPen : isDeleteDefaultAction ? deleteNoteIcon : visible ? Eye : EyeOff)
+  const mainIcon = $derived(!noteId ? NotebookPen : isDeleteDefaultAction ? NotebookX : visible ? Eye : EyeOff)
   /** The dropdown offers only deletion; its trigger is disabled when the main action already deletes or no note exists. */
-  const moreOptions = [{ id: 'delete', label: 'Delete Note', detail: 'Permanently delete attached note', icon: deleteNoteIcon, testId: 'attached-note-delete' }]
+  const moreOptions = [{ id: 'delete', label: 'Delete Note', detail: 'Permanently delete attached note', icon: NotebookX, testId: 'attached-note-delete' }]
 
   /** Removes the note and its persisted visibility through the existing atomic mutation. */
   const handleDelete = (): void => {

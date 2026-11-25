@@ -24,7 +24,7 @@
     MoreHorizontal,
     Pencil,
     Trash2
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
     PROMPT_STATUS_ACCORDION_PERSISTENCE_ID

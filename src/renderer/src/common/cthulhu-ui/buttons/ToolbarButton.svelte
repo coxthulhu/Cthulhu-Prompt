@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import type { HTMLButtonAttributes } from 'svelte/elements'
   import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
@@ -9,9 +9,9 @@
 
   /** Compact labeled action with optional controlled toggle icons. */
   type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled' | 'aria-pressed'> & {
-    icon: ComponentType
-    pressedIcon?: ComponentType
-    pressedHoverIcon?: ComponentType
+    icon: LucideIcon
+    pressedIcon?: LucideIcon
+    pressedHoverIcon?: LucideIcon
     text: string
     pressed?: boolean
     /** Prevents activation and applies the shared disabled appearance. */

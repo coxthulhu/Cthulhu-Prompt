@@ -1,12 +1,13 @@
 <script lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
 
   /** Shared sidebar title row; modes may place their own controls after the title. */
   let { title, icon: Icon, screenHeader = false, titleAccessory, children }: {
     /** Mode title shown in the top left of the sidebar. */
     title: string
     /** Optional icon shown before the title, such as the shown collection's kind icon. */
-    icon?: ComponentType
+    icon?: LucideIcon
     /** Lines up with the collection screen header bar beside the sidebar and shows the title in normal text, for a title
         that names the shown collection rather than captioning a list. */
     screenHeader?: boolean

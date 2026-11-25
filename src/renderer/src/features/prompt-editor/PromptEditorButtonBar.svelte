@@ -3,7 +3,7 @@
   import CopyButton from '@renderer/common/cthulhu-ui/buttons/CopyButton.svelte'
   import IconButtonBar from '@renderer/common/cthulhu-ui/buttons/IconButtonBar.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
-  import { Layers, Zap } from 'lucide-svelte'
+  import { Layers, Zap } from '@lucide/svelte'
 
   type Props = {
     /** Attached-note and open-editor actions supplied by the owning editor. */

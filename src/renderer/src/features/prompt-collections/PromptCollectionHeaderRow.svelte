@@ -6,7 +6,7 @@
 <script lang="ts">
   import { collectionIcons } from '@renderer/features/prompt-collections/collectionIcons'
   import PageHeader from '@renderer/common/cthulhu-ui/layout/PageHeader.svelte'
-  import { FolderCog, Pencil, Trash2 } from 'lucide-svelte'
+  import { FolderCog, Pencil, Trash2 } from '@lucide/svelte'
   import ButtonBar from '@renderer/common/cthulhu-ui/buttons/ButtonBar.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import ToolbarButton from '@renderer/common/cthulhu-ui/buttons/ToolbarButton.svelte'

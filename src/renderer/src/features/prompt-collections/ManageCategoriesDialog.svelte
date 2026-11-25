@@ -17,7 +17,7 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
-  import { Folder, FolderCog } from 'lucide-svelte'
+  import { Folder, FolderCog } from '@lucide/svelte'
   import type { Category } from '@shared/domain/category/Category'
   import {
     hasCategoryDisplayNameConflict,

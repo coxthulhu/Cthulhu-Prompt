@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowRight, Folder, Plus, Settings } from 'lucide-svelte'
+  import { ArrowRight, Folder, Plus, Settings } from '@lucide/svelte'
   import DropTarget from '@renderer/common/drag-drop/DropTarget.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'

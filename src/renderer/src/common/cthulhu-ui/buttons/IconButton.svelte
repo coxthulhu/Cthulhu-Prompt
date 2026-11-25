@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import type { Action } from 'svelte/action'
   import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
@@ -18,7 +18,7 @@
   type IconButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
-    icon: ComponentType
+    icon: LucideIcon
     label: string
     size?: IconButtonSize
     appearance?: IconButtonAppearance

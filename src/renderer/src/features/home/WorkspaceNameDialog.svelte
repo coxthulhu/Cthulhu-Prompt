@@ -9,7 +9,7 @@
   import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
   import ToggleButton from '@renderer/common/cthulhu-ui/buttons/ToggleButton.svelte'
   import { prepareWorkspaceName, type WorkspaceListEntry } from '@shared/domain/workspace/Workspace'
-  import { FolderPlus, Pencil } from 'lucide-svelte'
+  import { FolderPlus, Pencil } from '@lucide/svelte'
   import type { WorkspaceSelectionResult } from '@renderer/features/workspace/types'
 
   /** Shared workspace name form, mounted fresh for each Create or Rename action. */

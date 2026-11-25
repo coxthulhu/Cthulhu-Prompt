@@ -4,7 +4,7 @@
   import { getPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
   import { emptyItemsLabel } from '@renderer/common/emptyStateText'
   import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
-  import { Loader } from 'lucide-svelte'
+  import { Loader } from '@lucide/svelte'
   import {
     createDroppableStateRegistry,
     type DroppableAllowedEdges,

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
-  import { Repeat } from 'lucide-svelte'
+  import { Repeat } from '@lucide/svelte'
   import { onMount, tick } from 'svelte'
   import AttachedNoteButton from './AttachedNoteButton.svelte'
   import AttachedNoteSection from './AttachedNoteSection.svelte'
@@ -9,7 +9,7 @@
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { compactGuid } from '@shared/utilities/compactGuid'
   import { registerKeyboardScope } from '@renderer/common/keyboardRouter'
-  import { Check, Layers, Maximize2, Minimize2, Plus } from 'lucide-svelte'
+  import { Check, Layers, Maximize2, Minimize2, Plus } from '@lucide/svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import EditorSplitHandle from './EditorSplitHandle.svelte'
   import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'

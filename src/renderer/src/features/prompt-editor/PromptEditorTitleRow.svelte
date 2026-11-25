@@ -1,5 +1,6 @@
 <script module lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
   import type { PromptCollectionFindRequest, PromptCollectionFindSelection } from '../prompt-collections/find/promptCollectionFindTypes'
 
@@ -36,7 +37,7 @@
     metadataTemplateLabel?: string | null
     metadataTemplateState?: 'not-selected' | 'no-template' | 'selected'
     tokenCount: number
-    icon?: ComponentType
+    icon?: LucideIcon
     copyLabel?: string
     copyTitle?: string
     deleteLabel?: string
@@ -63,7 +64,7 @@
   import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
   import PromptStatusIndicator from './PromptStatusIndicator.svelte'
   import EditorMetadataRow from './EditorMetadataRow.svelte'
-  import { Archive, FileText, Layers, Trash2, Undo2 } from 'lucide-svelte'
+  import { Archive, FileText, Layers, Trash2, Undo2 } from '@lucide/svelte'
   import { isPromptStatus, PROMPT_STATUS_BEHAVIORS, PromptStatus } from '@shared/domain/prompt/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
   import { getPromptCollectionFindContext } from '../prompt-collections/find/promptCollectionFindContext'

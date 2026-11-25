@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AlertCircle, AlertTriangle } from 'lucide-svelte'
+  import { AlertCircle, AlertTriangle } from '@lucide/svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 

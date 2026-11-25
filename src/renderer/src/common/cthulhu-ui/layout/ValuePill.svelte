@@ -1,11 +1,11 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   type Props = {
     text: string
     title?: string
-    icon?: ComponentType
+    icon?: LucideIcon
     class?: string
     testId?: string
   }

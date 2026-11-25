@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import type { Action } from 'svelte/action'
   import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
-  import { Folder, Move, Plus, Search, Settings } from 'lucide-svelte'
+  import { Folder, Move, Plus, Search, Settings } from '@lucide/svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/forms/TextInput.svelte'

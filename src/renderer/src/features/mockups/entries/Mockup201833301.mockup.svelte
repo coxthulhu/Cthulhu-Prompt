@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
   import type { Action } from 'svelte/action'
   import {
     AlertCircle,
@@ -25,8 +24,9 @@
     Plus,
     Search,
     Settings,
-    X
-  } from 'lucide-svelte'
+    X,
+    type LucideIcon
+  } from '@lucide/svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
   import ResizeSash from '@renderer/common/cthulhu-ui/layout/ResizeSash.svelte'
 
@@ -65,7 +65,7 @@
   type FixedScreen = {
     id: string
     label: string
-    icon: ComponentType
+    icon: LucideIcon
     screenLabel: string
   }
 
@@ -79,7 +79,7 @@
     /** Project whose grid a dragged tile stays inside; null for project drags. */
     projectId: string | null
     target: DropTarget | null
-    ghost: { title: string; icon: ComponentType; x: number; y: number }
+    ghost: { title: string; icon: LucideIcon; x: number; y: number }
   }
 
   type ReorderOptions = {
@@ -87,7 +87,7 @@
     id: string
     projectId: string | null
     title: string
-    icon: ComponentType
+    icon: LucideIcon
     /** Element that holds pointer capture while the drag runs. */
     owner: HTMLElement
     /** Visible item IDs in display order. */
@@ -200,10 +200,10 @@
   /** Tooltip and accessible name describing the sidebar action. */
   const sidebarLabel = $derived(isAppSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar')
 
-  const getCollectionIcon = (kind: CollectionKind): ComponentType => (kind === 'template' ? Layers : FileText)
+  const getCollectionIcon = (kind: CollectionKind): LucideIcon => (kind === 'template' ? Layers : FileText)
 
   /** A collection tab is named after its collection and shows its kind icon; other tabs are New Tab. */
-  const getTabDisplay = (tab: WorkTab): { title: string; icon: ComponentType } => {
+  const getTabDisplay = (tab: WorkTab): { title: string; icon: LucideIcon } => {
     const shown = tab.collectionId ? collectionById.get(tab.collectionId) : undefined
     return shown ? { title: shown.name, icon: getCollectionIcon(shown.kind) } : { title: 'New Tab', icon: LayoutGrid }
   }
@@ -518,7 +518,7 @@
 
   /** Collection types offered by the dialog's side-by-side picker, with the icons their tiles use and the bullet points
       listed under each card's header. */
-  const collectionTypeOptions: { id: CollectionKind; label: string; bullets: string[]; icon: ComponentType }[] = [
+  const collectionTypeOptions: { id: CollectionKind; label: string; bullets: string[]; icon: LucideIcon }[] = [
     {
       id: 'prompt',
       label: 'Task Collection',
@@ -816,7 +816,7 @@
 </script>
 
 <!-- Dim borderless 36px sidebar button-bar action. -->
-{#snippet barButton(label: string, Icon: ComponentType)}
+{#snippet barButton(label: string, Icon: LucideIcon)}
   <button type="button" class="mockIconButton" aria-label={label} title={label}>
     <Icon size={20} aria-hidden="true" />
   </button>

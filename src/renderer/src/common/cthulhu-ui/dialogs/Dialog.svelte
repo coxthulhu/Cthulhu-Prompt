@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { X } from 'lucide-svelte'
-  import type { ComponentType, Snippet } from 'svelte'
+  import { X, type LucideIcon } from '@lucide/svelte'
+  import type { Snippet } from 'svelte'
   import Button, { type ButtonVariant } from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import Popup from '@renderer/common/cthulhu-ui/dialogs/Popup.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
@@ -11,7 +11,7 @@
   /** Dialog content and footer actions presented by the shared Popup base. */
   type Props = {
     open?: boolean
-    icon: ComponentType
+    icon: LucideIcon
     title: string
     subtitle?: string
     submitText: string
@@ -35,7 +35,7 @@
     secondaryActions?: Snippet
     submitVariant?: ButtonVariant
     // Optional leading icon for the primary action.
-    submitIcon?: ComponentType
+    submitIcon?: LucideIcon
     oncancel?: () => void
     onsubmit?: () => void
     /** Receives Close, X, and Escape requests instead of closing, so the owner can confirm first. */

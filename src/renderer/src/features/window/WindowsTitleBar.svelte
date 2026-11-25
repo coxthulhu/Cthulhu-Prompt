@@ -1,6 +1,5 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
-  import { Download, FileText, Layers, LayoutGrid, PanelLeftClose, PanelLeftOpen, Plus, Repeat, X } from 'lucide-svelte'
+  import { Download, FileText, Layers, LayoutGrid, PanelLeftClose, PanelLeftOpen, Plus, Repeat, X, type LucideIcon } from '@lucide/svelte'
   // Application artwork shown at the start of the title bar.
   import appIcon from '@renderer/assets/cutethulhu.png'
   import { screens, type ScreenId } from '@renderer/app/screens'
@@ -78,7 +77,7 @@
     titleBarScreenIds.filter((screenId) => isDevMode || !screens[screenId].devOnly)
   )
   /** Icon shown for each screen a work tab can be on. */
-  const workTabIcons: Record<WorkTabScreen, ComponentType> = {
+  const workTabIcons: Record<WorkTabScreen, LucideIcon> = {
     'new-tab': LayoutGrid,
     'prompt-collection': FileText,
     'template-collection': Layers,

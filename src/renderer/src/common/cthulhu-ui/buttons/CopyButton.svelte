@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ClipboardCheck, Copy } from 'lucide-svelte'
+  import { ClipboardCheck, Copy } from '@lucide/svelte'
   import IconButton, { type IconButtonHoverVariant } from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
 
   type Props = {

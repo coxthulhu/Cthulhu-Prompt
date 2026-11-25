@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/forms/FloatingValidationMessage.svelte'
   import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
@@ -8,7 +8,7 @@
   import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
   import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
-  import { FolderPlus } from 'lucide-svelte'
+  import { FolderPlus, type LucideIcon } from '@lucide/svelte'
   import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
   import {
     hasPromptCollectionNameConflict,
@@ -54,7 +54,7 @@
     unchangedDisplayName?: string | null
     duplicatePromptCollectionId?: string | null
     failureMessage: string
-    icon?: ComponentType
+    icon?: LucideIcon
     /** Extra fields shown below the collection name field. */
     trailingFields?: Snippet
     /** Dialog classes merged over the default width, such as a wider max width. */

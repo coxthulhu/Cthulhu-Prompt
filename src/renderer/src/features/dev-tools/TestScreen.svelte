@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, type ComponentType } from 'svelte'
+  import { onDestroy } from 'svelte'
   import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
   import {
     AlertCircle,
@@ -27,8 +27,9 @@
     Settings,
     Sparkles,
     Trash2,
-    X
-  } from 'lucide-svelte'
+    X,
+    type LucideIcon
+  } from '@lucide/svelte'
   import Accordion from '@renderer/features/sidebar/accordion/Accordion.svelte'
   import AccordionSection from '@renderer/features/sidebar/accordion/AccordionSection.svelte'
   import CardSurface, {
@@ -115,7 +116,7 @@
   const iconCandidates: {
     name: string
     description: string
-    icon: ComponentType
+    icon: LucideIcon
   }[] = [
     {
       name: 'Repeat',

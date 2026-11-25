@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AlertCircle } from 'lucide-svelte'
+  import { AlertCircle } from '@lucide/svelte'
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import LogDetails from '@renderer/common/cthulhu-ui/layout/LogDetails.svelte'
   import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'

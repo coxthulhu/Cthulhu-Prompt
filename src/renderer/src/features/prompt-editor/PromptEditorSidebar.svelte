@@ -3,7 +3,7 @@
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import type { Action } from 'svelte/action'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
-  import { GripVertical } from 'lucide-svelte'
+  import { GripVertical } from '@lucide/svelte'
   import {
     draggable,
     type DragFinishResult,

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { collectionIcons } from '@renderer/features/prompt-collections/collectionIcons'
   import type { Action } from 'svelte/action'
-  import { EyeOff } from 'lucide-svelte'
+  import { EyeOff } from '@lucide/svelte'
   import {
     createDroppableStateRegistry,
     draggable,

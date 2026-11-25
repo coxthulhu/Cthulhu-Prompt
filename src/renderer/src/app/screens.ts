@@ -1,5 +1,4 @@
-import type { ComponentType } from 'svelte'
-import { Bug, Home, LayoutGrid, PanelsTopLeft, Settings } from 'lucide-svelte'
+import { Bug, Home, LayoutGrid, PanelsTopLeft, Settings, type LucideIcon } from '@lucide/svelte'
 import { SidebarModeId } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
 
 export type ScreenId =
@@ -14,7 +13,7 @@ type ScreenConfig = {
   testId: string
   requiresWorkspace: boolean
   devOnly?: boolean
-  icon?: ComponentType
+  icon?: LucideIcon
   /** Sidebar mode displayed beside this screen, or null for screens without a sidebar. */
   sidebarMode: SidebarModeId | null
 }

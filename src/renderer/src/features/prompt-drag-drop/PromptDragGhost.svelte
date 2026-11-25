@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
 
   // The leading icon matches the one shown beside the dragged item.
-  let { title, icon: Icon }: { title: string; icon: ComponentType } = $props()
+  let { title, icon: Icon }: { title: string; icon: LucideIcon } = $props()
 </script>
 
 <div class="promptDragGhost">

@@ -11,7 +11,7 @@
   import NumericStepperInput from '@renderer/common/cthulhu-ui/forms/NumericStepperInput.svelte'
   import ToggleButton from '@renderer/common/cthulhu-ui/buttons/ToggleButton.svelte'
   import SimpleSelectorButton from '@renderer/common/cthulhu-ui/selectors/SimpleSelectorButton.svelte'
-  import { ExternalLink, FlaskConical, Info, RefreshCcw, Settings, ShieldCheck, TextCursorInput, Type } from 'lucide-svelte'
+  import { ExternalLink, FlaskConical, Info, RefreshCcw, Settings, ShieldCheck, TextCursorInput, Type } from '@lucide/svelte'
   import {
     flushSystemSettingsAutosaves,
     selectSystemSettingsClientStateRecord,

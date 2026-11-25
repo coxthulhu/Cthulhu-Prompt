@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
-  import { ChevronDown, ChevronUp } from 'lucide-svelte'
+  import { ChevronDown, ChevronUp, type LucideIcon } from '@lucide/svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
@@ -23,13 +23,13 @@
     | string
     | {
         text: string
-        icon?: ComponentType
+        icon?: LucideIcon
         testId?: string
       }
   type SelectorButtonAction = Action<HTMLButtonElement, unknown>
 
   type Props = {
-    icon: ComponentType
+    icon: LucideIcon
     text: string
     detail?: string
     detailParts?: SelectorButtonDetailPart[]

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import type { Action } from 'svelte/action'
   import { draggable } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import DropTarget from '@renderer/common/drag-drop/DropTarget.svelte'
@@ -17,7 +17,7 @@
     /** Overrides prompt identity when this row represents a collection. */
     testId?: string
     /** Optional collection icon before the row label. */
-    icon?: ComponentType
+    icon?: LucideIcon
     /** Optional content count at the end of a collection row. */
     count?: number
     /** Status or template namespace used by this reusable row. */

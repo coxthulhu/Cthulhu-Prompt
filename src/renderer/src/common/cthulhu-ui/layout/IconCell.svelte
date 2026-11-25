@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
@@ -17,7 +17,7 @@
   }
 
   type Props = HTMLAttributes<HTMLSpanElement> & {
-    icon: ComponentType
+    icon: LucideIcon
     iconClass?: string
     variant?: IconCellVariant
   }

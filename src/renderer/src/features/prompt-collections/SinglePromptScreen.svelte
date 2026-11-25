@@ -2,7 +2,7 @@
   import { collectionItemLabel } from '@shared/domain/prompt-collection/PromptCollection'
   import { onMount, untrack } from 'svelte'
   import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
-  import { X } from 'lucide-svelte'
+  import { X } from '@lucide/svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'

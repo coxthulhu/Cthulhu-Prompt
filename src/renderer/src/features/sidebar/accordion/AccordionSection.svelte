@@ -1,7 +1,7 @@
 <script lang="ts">
   import ResizeSash from '@renderer/common/cthulhu-ui/layout/ResizeSash.svelte'
-  import { ChevronRight } from 'lucide-svelte'
-  import { untrack, type ComponentType, type Snippet } from 'svelte'
+  import { ChevronRight, type LucideIcon } from '@lucide/svelte'
+  import { untrack, type Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { getAccordionContext } from './accordionContext'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
@@ -19,7 +19,7 @@
   type Props = Omit<HTMLAttributes<HTMLElement>, 'children'> & {
     id: string
     label: string
-    icon: ComponentType
+    icon: LucideIcon
     count?: number
     initialExpandedHeightPx?: number
     minimumExpandedContentHeightPx?: number

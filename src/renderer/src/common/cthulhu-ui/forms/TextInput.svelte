@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import type { WithElementRef } from '@renderer/common/cthulhu-ui/elementRef'
   import type { HTMLInputAttributes } from 'svelte/elements'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
@@ -9,7 +9,7 @@
       value?: string
       readonlyDisplay?: boolean
       /** Glyph drawn inside the field's left edge, such as a search icon; the caller's class then sizes the field's wrapper. */
-      icon?: ComponentType
+      icon?: LucideIcon
     }
   >
 

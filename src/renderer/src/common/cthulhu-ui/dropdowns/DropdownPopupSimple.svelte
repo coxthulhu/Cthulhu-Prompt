@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import DropdownPopupCore, {
     type DropdownPopupMenuAlignment,
     type DropdownPopupPlacement,
@@ -12,7 +13,7 @@
   export type DropdownPopupItem = {
     id: string
     label: string
-    icon: ComponentType
+    icon: LucideIcon
     testId?: string
     variant?: DropdownPopupItemVariant
   }

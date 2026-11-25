@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { Trash2 } from 'lucide-svelte'
-  import type { ComponentType } from 'svelte'
+  import { Trash2, type LucideIcon } from '@lucide/svelte'
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import SelectionIndicator from '@renderer/common/cthulhu-ui/forms/SelectionIndicator.svelte'
 
@@ -11,7 +10,7 @@
     description: string
     confirmText: string
     variant?: 'destructive' | 'informational'
-    icon?: ComponentType
+    icon?: LucideIcon
     closeOnOutsideClick?: boolean
     /** Shows the red acknowledgement section and gates confirmation when supplied. */
     confirmationText?: string

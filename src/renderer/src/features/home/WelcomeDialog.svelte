@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ArrowRight, BookOpen, Check, FileText, Home, Layers, Zap } from 'lucide-svelte'
+  import { ArrowRight, BookOpen, Check, FileText, Home, Layers, Zap } from '@lucide/svelte'
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import NumberedStepRow from '@renderer/common/cthulhu-ui/layout/NumberedStepRow.svelte'
   import { markWelcomeShown } from '@renderer/data/Mutations/UserPersistenceMutations'

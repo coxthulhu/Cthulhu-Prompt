@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check, Copy } from 'lucide-svelte'
+  import { Check, Copy } from '@lucide/svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   type Props = {

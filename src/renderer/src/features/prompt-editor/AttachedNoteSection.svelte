@@ -2,7 +2,7 @@
   import { getTabStateContext } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
   import { notesCollection } from '@renderer/data/Collections/NotesCollection'
   import { onMount, untrack } from 'svelte'
-  import { EyeOff, NotebookPen } from 'lucide-svelte'
+  import { EyeOff, NotebookPen } from '@lucide/svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import { createNoteEditorModelUri, type monaco } from '@renderer/common/Monaco'

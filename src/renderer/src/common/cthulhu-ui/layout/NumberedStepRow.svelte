@@ -1,11 +1,12 @@
 <script lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   /** Content for a numbered instruction with a supporting tip. */
   type Props = {
     number: number
-    icon: ComponentType
+    icon: LucideIcon
     title: string
     description: string
     badge?: string

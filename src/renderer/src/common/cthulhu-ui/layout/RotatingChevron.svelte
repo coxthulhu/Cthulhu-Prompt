@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronRight } from 'lucide-svelte'
+  import { ChevronRight } from '@lucide/svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   type Props = {

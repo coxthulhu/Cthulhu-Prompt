@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
   import { onDestroy, tick, untrack } from 'svelte'
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import {
@@ -26,7 +25,7 @@
     FolderCog,
     FolderOpen,
     GripVertical,
-    Icon as LucideIcon,
+    Icon as CustomIcon,
     Layers,
     LayoutGrid,
     ListTodo,
@@ -41,8 +40,9 @@
     Trash2,
     Zap,
     X,
-    type IconProps
-  } from 'lucide-svelte'
+    type LucideIcon,
+    type LucideIconData
+  } from '@lucide/svelte'
   import * as monaco from 'monaco-editor'
   import { estimateTokenCount } from 'tokenx'
   import ResizeSash from '@renderer/common/cthulhu-ui/layout/ResizeSash.svelte'
@@ -55,16 +55,19 @@
   // No workspace, IPC, settings, or domain mutations are used; Show All and Open in editor are inert.
   const NO_TEMPLATE_LABEL = 'No template'
   /** Lucide notebook-pen with its lower-right corner opened for a delete mark, matching the live NotebookX icon. */
-  const notebookXIconNode: IconProps['iconNode'] = [
-    ['path', { d: 'M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h7' }],
-    ['path', { d: 'M2 6h4' }],
-    ['path', { d: 'M2 10h4' }],
-    ['path', { d: 'M2 14h4' }],
-    ['path', { d: 'M2 18h4' }],
-    ['path', { d: 'M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z' }],
-    ['path', { d: 'm17 17 5 5' }],
-    ['path', { d: 'm22 17-5 5' }]
-  ]
+  const notebookXIcon: LucideIconData = {
+    name: 'notebook-x',
+    node: [
+      ['path', { d: 'M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h7' }],
+      ['path', { d: 'M2 6h4' }],
+      ['path', { d: 'M2 10h4' }],
+      ['path', { d: 'M2 14h4' }],
+      ['path', { d: 'M2 18h4' }],
+      ['path', { d: 'M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z' }],
+      ['path', { d: 'm17 17 5 5' }],
+      ['path', { d: 'm22 17-5 5' }]
+    ]
+  }
   const TEMPLATE_NOT_SELECTED_LABEL = 'Not selected'
 
   const MockPromptStatus = {
@@ -163,8 +166,8 @@
     disabled?: boolean
     hoverVariant?: 'neutral' | 'accent' | 'success' | 'danger' | 'glyph'
     iconClass?: string
-    /** Custom Lucide node list drawn instead of the icon component, such as NotebookX. */
-    iconNode?: IconProps['iconNode']
+    /** Custom Lucide glyph for actions such as notebook deletion. */
+    customIcon?: LucideIconData
     iconSize?: number
     onclick?: (event: MouseEvent) => void
     size?: 'default' | 'compact' | 'compact-large-icon' | 'tiny' | 'sidebar-rail'
@@ -1219,7 +1222,7 @@
 
   /** Sidebar keeps finalized sections above the category-ordered workflows. */
   const sidebarGroups: MockGroup[] = ['Completed', 'Archived', 'Active', 'Backlog']
-  const groupIcons: Record<MockGroup, ComponentType> = {
+  const groupIcons: Record<MockGroup, LucideIcon> = {
     Active: ListTodo,
     Backlog: Clock,
     Completed: CircleCheckBig,
@@ -2084,7 +2087,7 @@
 </script>
 
 {#snippet IconButton(
-  Icon: ComponentType,
+  Icon: LucideIcon,
   label: string,
   options: MockIconButtonOptions = {}
 )}
@@ -2105,10 +2108,9 @@
     disabled={options.disabled}
     onclick={options.onclick}
   >
-    {#if options.iconNode}
-      <LucideIcon
-        name="notebook-x"
-        iconNode={options.iconNode}
+    {#if options.customIcon}
+      <CustomIcon
+        icon={options.customIcon}
         class={options.iconClass}
         size={options.iconSize ?? 20}
         aria-hidden="true"
@@ -2150,7 +2152,7 @@
   </div>
 {/snippet}
 
-{#snippet IconCell(Icon: ComponentType, large = false)}
+{#snippet IconCell(Icon: LucideIcon, large = false)}
   <span class="base-icon-cell">
     <Icon size={large ? 32 : 24} strokeWidth={large ? 1.5 : 2} aria-hidden="true" />
   </span>
@@ -2297,7 +2299,7 @@
     {@render IconButton(!prompt.note ? NotebookPen : prompt.note.visible ? Eye : EyeOff, label, {
       ariaPressed: prompt.note && !isDeleteDefault ? prompt.note.visible : undefined,
       hoverVariant: isDeleteDefault ? 'danger' : 'neutral',
-      iconNode: isDeleteDefault ? notebookXIconNode : undefined,
+      customIcon: isDeleteDefault ? notebookXIcon : undefined,
       onclick: () => { void toggleAttachedNote(prompt) }
     })}
     <span class="base-split-separator" aria-hidden="true"></span>
@@ -2320,7 +2322,7 @@
         use:mountMockMenu={{ anchor: noteAnchor }}>
         <button class="base-status-menu-item" type="button" role="menuitem" onclick={() => requestNoteDelete(prompt)}>
           <span class="base-status-menu-icon" data-action="delete">
-            <LucideIcon name="notebook-x" iconNode={notebookXIconNode} size={20} aria-hidden="true" />
+            <CustomIcon icon={notebookXIcon} size={20} aria-hidden="true" />
           </span>
           <span class="base-status-menu-text">
             <span class="base-status-menu-title text-sm leading-4.5">Delete Note</span>

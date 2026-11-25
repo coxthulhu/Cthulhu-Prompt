@@ -1,10 +1,11 @@
 <script lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import { EDITOR_SUBTITLE_BAR_HEIGHT_PX } from './promptEditorSizing'
 
   type Props = {
-    icon: ComponentType
+    icon: LucideIcon
     title: string
     configuredCount: number
     totalCount: number

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
   import { onDestroy, untrack } from 'svelte'
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import {
@@ -29,8 +28,9 @@
     Search,
     Trash2,
     Zap,
-    X
-  } from 'lucide-svelte'
+    X,
+    type LucideIcon
+  } from '@lucide/svelte'
   import * as monaco from 'monaco-editor'
   import { estimateTokenCount } from 'tokenx'
   import CopyButton from '@renderer/common/cthulhu-ui/buttons/CopyButton.svelte'
@@ -132,7 +132,7 @@
   }
 
   type MockSplitMenuItem = {
-    icon: ComponentType
+    icon: LucideIcon
     title: string
     subtitle: string
     onclick: () => void
@@ -1163,7 +1163,7 @@
 </script>
 
 {#snippet IconButton(
-  Icon: ComponentType,
+  Icon: LucideIcon,
   label: string,
   options: MockIconButtonOptions = {}
 )}
@@ -1197,7 +1197,7 @@
 {/snippet}
 
 {#snippet SplitIconButton(
-  Icon: ComponentType,
+  Icon: LucideIcon,
   label: string,
   options: MockIconButtonOptions,
   menuKey: string,
@@ -1233,7 +1233,7 @@
   </div>
 {/snippet}
 
-{#snippet IconCell(Icon: ComponentType, large = false)}
+{#snippet IconCell(Icon: LucideIcon, large = false)}
   <span class="base-icon-cell">
     <Icon size={large ? 32 : 24} strokeWidth={large ? 1.5 : 2} aria-hidden="true" />
   </span>

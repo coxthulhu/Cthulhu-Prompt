@@ -1,10 +1,10 @@
-import { Archive, Check, CircleDashed, Clock, Play } from 'lucide-svelte'
+import { Archive, Check, CircleDashed, Clock, Play, type LucideIcon } from '@lucide/svelte'
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import type { SimpleSelectorButtonItem } from '@renderer/common/cthulhu-ui/selectors/SimpleSelectorButton.svelte'
 
 /** Optional quick transition rendered beside the status selector. */
 type QuickStatusAction = {
-  icon: typeof Check
+  icon: LucideIcon
   label: string
   hoverVariant: 'neutral' | 'success'
   testId: string

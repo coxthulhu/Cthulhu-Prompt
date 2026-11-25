@@ -1,5 +1,4 @@
-import type { ComponentType } from 'svelte'
-import { FileText, Folder, Repeat } from 'lucide-svelte'
+import { FileText, Folder, Repeat, type LucideIcon } from '@lucide/svelte'
 import type { DragGhostOptions } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
 import PromptDragGhost from './PromptDragGhost.svelte'
 
@@ -14,7 +13,7 @@ export type PromptDragGhostKind =
 export const createPromptDragGhost = (
   title: string,
   kind: PromptDragGhostKind = 'prompt',
-  icon: ComponentType = kind === 'category' ? Folder : kind === 'routine' ? Repeat : FileText
+  icon: LucideIcon = kind === 'category' ? Folder : kind === 'routine' ? Repeat : FileText
 ): DragGhostOptions => ({
   component: PromptDragGhost,
   kind,

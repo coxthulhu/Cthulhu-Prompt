@@ -1,10 +1,11 @@
 <script lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import Row from '@renderer/common/cthulhu-ui/layout/Row.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   type Props = {
-    icon?: ComponentType
+    icon?: LucideIcon
     label: string
     detail: string
     wrapDetail?: boolean

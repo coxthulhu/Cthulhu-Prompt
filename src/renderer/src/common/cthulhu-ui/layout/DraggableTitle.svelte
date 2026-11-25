@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { GripVertical } from 'lucide-svelte'
+  import { GripVertical } from '@lucide/svelte'
   import type { Action } from 'svelte/action'
   import type { HTMLButtonAttributes } from 'svelte/elements'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'

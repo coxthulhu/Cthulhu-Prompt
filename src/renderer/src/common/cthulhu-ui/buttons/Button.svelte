@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { LucideIcon } from '@lucide/svelte'
   import type { Action } from 'svelte/action'
   import type { HTMLButtonAttributes } from 'svelte/elements'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
@@ -9,8 +9,8 @@
   export type ButtonAppearance = 'filled' | 'outline'
 
   type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled'> & {
-    icon?: ComponentType
-    endIcon?: ComponentType
+    icon?: LucideIcon
+    endIcon?: LucideIcon
     text: string
     variant?: ButtonVariant
     appearance?: ButtonAppearance

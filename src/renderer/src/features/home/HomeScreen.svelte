@@ -11,7 +11,7 @@
     Pencil,
     Plus,
     X
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import ErrorDialog from '@renderer/common/cthulhu-ui/dialogs/ErrorDialog.svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
