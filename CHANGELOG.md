@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.0.38
+
+### New Features
+
+- Added routine collections for prompts you reuse, which stay active after copying and can be archived when you stop using them. Existing workspaces gain an empty My Routines collection in each project, and new workspaces with examples include an Update the Changelog routine.
+- Added a Default Workspace that is created on first launch and opens with the Welcome dialog.
+- Added renaming the open workspace from Home.
+- Added a sidebar toggle to the title bar.
+- Added a Home card that suggests opening a new tab when the workspace has no open tabs.
+- Added counts of collections and projects hidden by search on the New Tab screen.
+- Added the project to the collection header and the single-prompt path.
+- Added a simple example template to new workspaces with examples.
+
+### Changes
+
+- Store each workspace in its own SQLite database in `%APPDATA%\CthulhuPrompt\Workspaces` instead of a folder of Markdown files. The last opened workspace is imported automatically.
+- Open on Home now lists saved workspaces, and Open Workspace Folder selects the workspace database in Explorer.
+- Choose the collection type in the Create Collection dialog, which describes each type.
+- Require collection names to be unique across all collection types within a project.
+- Open the starter collections in tabs when creating a workspace, and explain collection tabs in the Welcome dialog.
+- Confirm before closing Manage Projects or Manage Categories with unsaved changes.
+- Scroll a prompt's body or attached note with the mouse wheel while any of its title, body, or note has focus.
+- Moved New Tab project settings to a gear button beside New Collection, show projects with a plain folder icon, and show drop indicators when reordering projects and collections.
+- Size dropdown menus to fit their text.
+- Set the default window size to 1440x900.
+- Keep selected items unchanged on hover and use the arrow cursor for selectable options.
+- Inset sidebar content while keeping separators full width.
+- Switch faster between collection, single-prompt, and New Tab screens.
+
+### Fixed
+
+- Fixed category context menus staying open when their row is left-clicked.
+- Fixed resizing the sidebar changing the collection's scroll position.
+- Fixed prompt editor syntax highlighting errors when inserting lines quickly.
+
 ## 0.0.37
 
 ### New Features
