@@ -44,18 +44,6 @@
       testId: 'create-prompt-collection-type-prompt'
     },
     {
-      id: 'template',
-      label: 'Template Collection',
-      bullets: [
-        'Wraps a task when applied to it',
-        'Guides how the AI does the work',
-        'Lists steps for the AI to follow',
-        'Sets response rules, like "be concise"'
-      ],
-      icon: collectionIcons.template,
-      testId: 'create-prompt-collection-type-template'
-    },
-    {
       id: 'routine',
       label: 'Routine Collection',
       bullets: [
@@ -66,6 +54,18 @@
       ],
       icon: collectionIcons.routine,
       testId: 'create-prompt-collection-type-routine'
+    },
+    {
+      id: 'template',
+      label: 'Template Collection',
+      bullets: [
+        'Wraps a task when applied to it',
+        'Guides how the AI does the work',
+        'Lists steps for the AI to follow',
+        'Sets response rules, like "be concise"'
+      ],
+      icon: collectionIcons.template,
+      testId: 'create-prompt-collection-type-template'
     }
   ]
 

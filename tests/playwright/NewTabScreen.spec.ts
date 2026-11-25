@@ -365,34 +365,30 @@ describe('New Tab Screen', () => {
     /** Creation dialog opened by each project's New Collection button. */
     const dialog = mainWindow.getByRole('dialog', { name: 'Create Collection' })
     const taskOption = dialog.getByTestId('create-prompt-collection-type-prompt')
-    /** Third card creates a routine collection in this project. */
     const routineOption = dialog.getByTestId('create-prompt-collection-type-routine')
     const templateOption = dialog.getByTestId('create-prompt-collection-type-template')
     const nameInput = dialog.getByTestId('create-prompt-collection-name-input')
     const createButton = dialog.getByTestId('create-prompt-collection-button')
     const nameError = dialog.getByTestId('create-prompt-collection-name-error')
 
-    // The focused name field comes first, and the type picker below it shows the Task and Template cards side by side
-    // at equal sizes across the field, each listing its bullets under its label. Task is selected with an accent border
-    // and an accent fill on its header row only, leaving the bullet body clear.
+    // The focused name field sits above three equal-width cards. Task is selected by default.
     await mainWindow.getByTestId(`new-tab-new-collection-${harborProjectId}`).click()
     await expect(dialog.getByTestId('create-prompt-collection-type-selector').getByRole('button')).toHaveText([
       /Task Collection\s*Describes one piece of work.*Apply a template to guide the work/,
-      /Template Collection\s*Wraps a task when applied to it.*Sets response rules, like "be concise"/,
-      /Routine Collection\s*Save work you do repeatedly/
+      /Routine Collection\s*Save work you do repeatedly/,
+      /Template Collection\s*Wraps a task when applied to it.*Sets response rules, like "be concise"/
     ])
     const typeFieldBox = (await dialog.getByTestId('create-prompt-collection-type-field').boundingBox())!
     const nameFieldBox = (await dialog.getByTestId('prompt-collection-name-field').boundingBox())!
     expect(nameFieldBox.y + nameFieldBox.height).toBeLessThanOrEqual(typeFieldBox.y)
     const taskBox = (await taskOption.boundingBox())!
+    const routineBox = (await routineOption.boundingBox())!
     const templateBox = (await templateOption.boundingBox())!
     expect(Math.abs(taskBox.x - typeFieldBox.x)).toBeLessThanOrEqual(1)
-    expect(Math.abs(templateBox.x - (taskBox.x + taskBox.width + 12))).toBeLessThanOrEqual(1)
-    /** The third card completes the row at the right edge of the field. */
-    const routineBox = (await routineOption.boundingBox())!
-    expect(Math.abs(routineBox.x - (templateBox.x + templateBox.width + 12))).toBeLessThanOrEqual(1)
+    expect(Math.abs(routineBox.x - (taskBox.x + taskBox.width + 12))).toBeLessThanOrEqual(1)
+    expect(Math.abs(templateBox.x - (routineBox.x + routineBox.width + 12))).toBeLessThanOrEqual(1)
     expect(Math.abs(routineBox.width - templateBox.width)).toBeLessThanOrEqual(1)
-    expect(Math.abs(routineBox.x + routineBox.width - (typeFieldBox.x + typeFieldBox.width))).toBeLessThanOrEqual(1)
+    expect(Math.abs(templateBox.x + templateBox.width - (typeFieldBox.x + typeFieldBox.width))).toBeLessThanOrEqual(1)
     expect(Math.abs(templateBox.width - taskBox.width)).toBeLessThanOrEqual(1)
     expect(Math.abs(templateBox.y - taskBox.y)).toBeLessThanOrEqual(1)
     expect(Math.abs(templateBox.height - taskBox.height)).toBeLessThanOrEqual(1)
