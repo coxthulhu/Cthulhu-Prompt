@@ -3,6 +3,18 @@ import { readFileSync } from 'node:fs'
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
 
+/** Installer names; they match the NSIS and portable artifactName settings in electron-builder.yml. */
+const installerNames = (version) => ({
+  setup: `CthulhuPrompt_${version}_Windows_Setup.exe`,
+  portable: `CthulhuPrompt_${version}_Windows_Portable.exe`
+})
+
+/** Every file the download links and auto-updater need on the published release. */
+const requiredAssetNames = (version) => {
+  const { setup, portable } = installerNames(version)
+  return [setup, `${setup}.blockmap`, portable, 'latest.yml']
+}
+
 /** Builds release notes from download links and the version's CHANGELOG.md section. */
 export function buildReleaseNotes(tag, repository, changelog) {
   const version = tag.slice(1)
@@ -17,6 +29,7 @@ export function buildReleaseNotes(tag, repository, changelog) {
   const section = lines.slice(start + 1, end === -1 ? undefined : end).join('\n').trim().replace(/^### /gm, '## ')
   /** Tagged download path; draft asset URLs 404 once the release is published. */
   const base = `https://github.com/${repository}/releases/download/${tag}`
+  const { setup, portable } = installerNames(version)
   return [
     // Markers keep the download table identifiable for any later tooling that edits notes.
     '<!-- downloads:start -->',
@@ -24,9 +37,8 @@ export function buildReleaseNotes(tag, repository, changelog) {
     '',
     '| Platform | Link |',
     '| --- | --- |',
-    // These names match the NSIS and portable artifactName settings in electron-builder.yml.
-    `| Windows Installer | [Download](<${base}/CthulhuPrompt_${version}_Windows_Setup.exe>) |`,
-    `| Windows Portable | [Download](<${base}/CthulhuPrompt_${version}_Windows_Portable.exe>) |`,
+    `| Windows Installer | [Download](<${base}/${setup}>) |`,
+    `| Windows Portable | [Download](<${base}/${portable}>) |`,
     '<!-- downloads:end -->',
     '',
     section,
@@ -34,9 +46,23 @@ export function buildReleaseNotes(tag, repository, changelog) {
   ].join('\n')
 }
 
+/** Refuses to publish a draft that lacks any download or auto-update file. */
+function verifyReleaseAssets(tag, repository) {
+  /** One asset name per line; Windows gh output may use CRLF endings. */
+  const output = execFileSync(
+    'gh',
+    ['release', 'view', tag, '--repo', repository, '--json', 'assets', '--jq', '.assets[].name'],
+    { encoding: 'utf8' }
+  )
+  const names = new Set(output.split(/\r?\n/).filter(Boolean))
+  const missing = requiredAssetNames(tag.slice(1)).filter((name) => !names.has(name))
+  if (missing.length) throw new Error(`Release ${tag} is missing ${missing.join(', ')}.`)
+}
+
 /** Publishes electron-builder's draft; 0.0.x and x.y.0 are prereleases, other x.y.z patches are stable. */
 export function publishRelease(tag, repository, changelog) {
   const notes = buildReleaseNotes(tag, repository, changelog)
+  verifyReleaseAssets(tag, repository)
   const prerelease = /^v0\.0\.|\.0$/.test(tag)
   // Pass the notes through stdin to preserve Markdown without shell quoting or temp files.
   execFileSync(

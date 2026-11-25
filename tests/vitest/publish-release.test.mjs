@@ -33,14 +33,29 @@ const changelog = [
   ''
 ].join('\r\n')
 
+/** gh's CRLF asset listing for a release that has every required file. */
+const completeAssetListing = (version) => [
+  `CthulhuPrompt_${version}_Windows_Portable.exe`,
+  `CthulhuPrompt_${version}_Windows_Setup.exe`,
+  `CthulhuPrompt_${version}_Windows_Setup.exe.blockmap`,
+  'latest.yml',
+  ''
+].join('\r\n')
+
 beforeEach(() => {
   vi.resetAllMocks()
+  // Every draft is complete unless a test supplies its own asset listing.
+  vi.mocked(execFileSync).mockImplementation((_command, args) =>
+    args[1] === 'view' ? completeAssetListing(args[2].slice(1)) : ''
+  )
 })
 
-/** Returns the single gh invocation made by publishRelease. */
+/** Returns the gh edit invocation after checking that the asset check ran first. */
 function ghCall() {
-  expect(vi.mocked(execFileSync)).toHaveBeenCalledTimes(1)
-  const [command, args, options] = vi.mocked(execFileSync).mock.calls[0]
+  expect(vi.mocked(execFileSync)).toHaveBeenCalledTimes(2)
+  const [[viewCommand, viewArgs], [command, args, options]] = vi.mocked(execFileSync).mock.calls
+  expect(viewCommand).toBe('gh')
+  expect(viewArgs[1]).toBe('view')
   expect(command).toBe('gh')
   return { args, notes: options.input }
 }
@@ -87,6 +102,21 @@ describe('publish release', () => {
       'release', 'edit', tag, '--repo', repository, '--title', tag,
       '--draft=false', `--prerelease=${prerelease}`, '--notes-file', '-'
     ])
+  })
+
+  it('lists the release assets before publishing', () => {
+    publishRelease('v1.2.3', repository, changelog)
+    expect(vi.mocked(execFileSync).mock.calls[0][1]).toEqual([
+      'release', 'view', 'v1.2.3', '--repo', repository, '--json', 'assets', '--jq', '.assets[].name'
+    ])
+  })
+
+  it('refuses to publish a release missing installers or update files', () => {
+    vi.mocked(execFileSync).mockReturnValueOnce('CthulhuPrompt_1.2.3_Windows_Setup.exe.blockmap\r\n')
+    expect(() => publishRelease('v1.2.3', repository, changelog)).toThrow(
+      'Release v1.2.3 is missing CthulhuPrompt_1.2.3_Windows_Setup.exe, CthulhuPrompt_1.2.3_Windows_Portable.exe, latest.yml.'
+    )
+    expect(vi.mocked(execFileSync)).toHaveBeenCalledTimes(1)
   })
 
   it('refuses to publish a version without a changelog section', () => {

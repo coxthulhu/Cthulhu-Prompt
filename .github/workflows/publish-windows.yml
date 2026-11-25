@@ -31,6 +31,13 @@ jobs:
       - name: Verify tag matches package version
         shell: bash
         run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      # electron-builder can start two GitHub publishers that each create a draft when none exists,
+      # splitting the uploads between them. An existing draft gives every upload one release to find.
+      - name: Create the draft release
+        shell: bash
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "$GITHUB_REF_NAME" --notes ""
       - name: Build and upload to a draft release (Windows)
         shell: bash
         run: |
