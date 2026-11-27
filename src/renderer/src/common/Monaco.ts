@@ -65,6 +65,25 @@ export const createNoteEditorModelUri = (noteId: string): monaco.Uri =>
 export const createDescriptionDraftModelUri = (draftKey: string): monaco.Uri =>
   monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/description-drafts/${draftKey}.md`)
 
+/** Markdown using the constructs prompts commonly contain, so the grammar warmup compiles the rules they reach. */
+const GRAMMAR_WARMUP_MARKDOWN = [
+  '# Heading',
+  '',
+  'Text with **bold**, *italic*, `code` and a [link](https://example.com).',
+  '',
+  '- Item',
+  '  1. Nested item',
+  '',
+  '> Quote',
+  '',
+  '```',
+  'Code',
+  '```'
+].join('\n')
+
+/** Creates and disposes an editor, then colors sample Markdown, so the first real editors skip Monaco's one-time
+    setup. Monaco loads the Markdown grammar asynchronously and compiles its rules (~250 ms) the first time it colors
+    text on the main thread, which otherwise happens when an editor first restores saved view state. */
 export const warmupMonacoEditor = async (): Promise<void> => {
   const warmupHost = document.createElement('div')
   warmupHost.style.position = 'fixed'
@@ -87,6 +106,9 @@ export const warmupMonacoEditor = async (): Promise<void> => {
   warmupEditor.dispose()
   warmupModelReference.dispose()
   warmupHost.remove()
+
+  // Side effect: waits for the Markdown grammar to load, then tokenizes with it on the main thread, compiling its rules.
+  await monaco.editor.colorize(GRAMMAR_WARMUP_MARKDOWN, 'markdown', {})
 }
 
 export { monaco }
