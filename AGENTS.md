@@ -55,6 +55,7 @@ When adding a new major application component or screen, add it to this list wit
 - When building playwright tests and validating positions, use either 1px or 2px tolerances, not more.
 - Do not add tests for mockups.
 - Never place icons on a filled background shape, such as an accent-colored square, circle, or badge behind the icon. Render icons directly on the surrounding surface and use the icon's own color for emphasis. This applies to components and mockups.
+- `build/svelte/lucideStaticIcons.mjs` compiles every `@lucide/svelte` icon to static SVG markup, so it ignores Lucide's `setLucideProps` context defaults and the `nonScalingStroke` prop. Pass icon props directly instead.
 
 ## Project Structure & Module Organization
 
