@@ -8,6 +8,7 @@
   import { FindModelBoundToEditorModel } from '@codingame/monaco-vscode-api/vscode/vs/editor/contrib/find/browser/findModel'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
   import { registerMonacoEditor, unregisterMonacoEditor } from './MonacoEditorRegistry'
+  import { disposeMonacoWhenIdle } from './monacoDisposalQueue'
   import {
     registerMonacoViewStateSaver,
     unregisterMonacoViewStateSaver
@@ -179,26 +180,28 @@
     return JSON.stringify(viewState)
   }
 
+  /** Restores saved view state, and returns whether there was any to restore. */
   const tryRestoreEditorViewState = (
     targetEditor: monaco.editor.IStandaloneCodeEditor,
     viewStateJson: string | null | undefined
-  ): void => {
-    if (!viewStateJson) return
+  ): boolean => {
+    if (!viewStateJson) return false
 
     try {
       targetEditor.restoreViewState(JSON.parse(viewStateJson) as monaco.editor.ICodeEditorViewState)
     } catch {
       // Monaco tolerates stale or incompatible view state; ignore restoration failures.
     }
+    return true
   }
 
   const restoreEditorViewStateWithScrollSuppression = (
     targetEditor: monaco.editor.IStandaloneCodeEditor,
     viewStateJson: string | null | undefined
-  ) => {
+  ): boolean => {
     suppressCursorAutoScrollDuringRestore = true
     try {
-      tryRestoreEditorViewState(targetEditor, viewStateJson)
+      return tryRestoreEditorViewState(targetEditor, viewStateJson)
     } finally {
       // Side effect: ignore restore-driven cursor changes only during synchronous restoration.
       suppressCursorAutoScrollDuringRestore = false
@@ -539,9 +542,13 @@
       /** Monaco key subscription implements focus navigation from the document edges. */
       const keyDownDisposable = nextEditor.onKeyDown(handleBoundaryKeyDown)
 
-      layoutEditor()
-      restoreEditorViewStateWithScrollSuppression(nextEditor, initialViewStateJson)
-      layoutEditor()
+      // Created at the measured width, so its wrapped content height is known and one layout applies it; each layout
+      // renders synchronously and forces a page layout.
+      monacoHeightPx = measureContentHeightPx()
+      nextEditor.layout({ width: measuredWidthPx, height: monacoHeightPx })
+      if (restoreEditorViewStateWithScrollSuppression(nextEditor, initialViewStateJson)) {
+        layoutEditor()
+      }
       lastContainerWidthPx = containerWidthPx
       emitChange(nextEditor.getValue(), false, monacoHeightPx)
       onFindMatchReveal?.(revealFindMatch)
@@ -566,8 +573,11 @@
         unregisterMonacoEditor(nextEditor)
         onEditorLifecycle?.(nextEditor, false)
         onFindMatchReveal?.(null)
-        nextEditor.dispose()
-        modelReference.dispose()
+        // Disposal tears down Monaco's view and services; its DOM has already left the page with this component.
+        disposeMonacoWhenIdle(() => {
+          nextEditor.dispose()
+          modelReference.dispose()
+        })
         editor = null
         findController = null
         clearFindState()

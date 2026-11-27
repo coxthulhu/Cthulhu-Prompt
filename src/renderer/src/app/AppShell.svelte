@@ -66,6 +66,7 @@
   } from './PromptNavigationContext.svelte.ts'
   import { flushAllAutosaves } from '@renderer/data/UiState/autosave/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
+  import { flushMonacoDisposals } from '@renderer/features/prompt-editor/monacoDisposalQueue'
   import { createCollectionViewState, createWorkspaceTab, pruneCollectionTabViews, type CollectionViewState, type WorkspaceTab } from '@shared/domain/ui-state/TabSession'
   import { getPromptCollectionCategoryIds } from '@shared/domain/prompt-collection/PromptCollection'
   import { AUTOSAVE_MS } from '@renderer/data/UiState/autosave/draftAutosave'
@@ -356,6 +357,7 @@
     restoringSession = false
     // Side effect: let workspace editors unmount before releasing their Monaco models.
     await tick()
+    flushMonacoDisposals()
     await clearWorkspaceMonacoModels()
   }
 

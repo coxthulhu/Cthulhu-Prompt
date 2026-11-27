@@ -6,6 +6,8 @@ export type MonacoHydrationEntry = {
 const activationQueue: MonacoHydrationEntry[] = []
 let rafHandle: number | null = null
 let hydrationPaused = false
+/** Whether the previous frame activated an editor; a queue starting from idle skips one frame first. */
+let activatedLastFrame = false
 
 export const isMonacoHydrationQueuePaused = (): boolean => hydrationPaused
 
@@ -14,14 +16,21 @@ const scheduleActivation = (): void => {
   rafHandle = window.requestAnimationFrame(() => {
     rafHandle = null
     if (hydrationPaused) return
-    if (activationQueue.length === 0) return
+    if (activationQueue.length === 0) {
+      activatedLastFrame = false
+      return
+    }
+    if (!activatedLastFrame) {
+      // Rows enqueued since the last frame mounted with this frame, so let it paint their placeholders first.
+      activatedLastFrame = true
+      scheduleActivation()
+      return
+    }
     activationQueue.sort((left, right) => left.priority - right.priority)
     const selected = activationQueue.shift()!
     selected.activate()
-
-    if (activationQueue.length > 0) {
-      scheduleActivation()
-    }
+    // The next frame continues the queue, or ends this run of activations once it is empty.
+    scheduleActivation()
   })
 }
 
