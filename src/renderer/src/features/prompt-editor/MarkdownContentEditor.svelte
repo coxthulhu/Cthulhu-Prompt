@@ -253,13 +253,16 @@
       promptEditorSizingConfig
     )
   })
-  const tokenCount = $derived(getPromptTokenCount(promptData.draft.text))
+  /** Draft text alone. The row rebuilds its draft record object on every scroll step, and unchanged text compares
+      equal here, so the text-derived values below recompute only when the text changes. */
+  const draftText = $derived(promptDraftRecord.text)
+  const tokenCount = $derived(getPromptTokenCount(draftText))
   // Derive configured state from the exact built-in token, regardless of occurrence count.
   const isPromptTextParameterConfigured = $derived(
-    promptData.draft.text.includes(PROMPT_TEXT_TEMPLATE_PARAMETER.token)
+    draftText.includes(PROMPT_TEXT_TEMPLATE_PARAMETER.token)
   )
   const promptTreeTitle = $derived(getPromptTitleText(promptDraftRecord))
-  const copyText = $derived(applyPromptTemplates(promptData.draft.text, copyTemplateTexts))
+  const copyText = $derived(applyPromptTemplates(draftText, copyTemplateTexts))
   // Track shared tree-entry drag state so both prompt drag entry points dim this row.
   const isDragging = $derived.by(() => {
     const draggedEntry = promptEntryDragState.draggedEntry
