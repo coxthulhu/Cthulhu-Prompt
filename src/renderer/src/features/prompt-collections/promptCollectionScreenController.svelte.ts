@@ -7,7 +7,12 @@ import {
   type MarkdownContentDraftRecord
 } from '@renderer/features/prompt-editor/markdownContentDraftRecord'
 import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
+import { untrack } from 'svelte'
 import { SvelteSet } from 'svelte/reactivity'
+import {
+  registerMonacoViewStateSaver,
+  unregisterMonacoViewStateSaver
+} from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
 import {
   getPromptStatusFolderDefinition,
   PROMPT_STATUS_FOLDER_REGISTRY,
@@ -128,6 +133,9 @@ type PromptCollectionScreenControllerOptions = {
   getScreenCollectionId: () => string
   getScreenMode: () => PromptCollectionScreenMode
 }
+
+/** Distinguishes each mounted controller's registered scroll-offset flush. */
+let nextScrollTopSaverId = 0
 
 export const createPromptCollectionScreenController = ({
   getScreenCollectionId,
@@ -871,6 +879,7 @@ export const createPromptCollectionScreenController = ({
       currentNavigationTarget !== null &&
       promptNavigation.contentRevealRequests.pending?.payload.screenCollectionId === screenCollectionId
     const explicitSelectionTarget = hasExplicitSelection ? currentNavigationTarget : null
+    untrack(flushPendingScrollTopWrite)
     /** Saved zero is a real position and must also override saved-item restoration. */
     const savedScrollTop = lookupPromptCollectionScrollTop(tabView, screenCollectionId, screenMode)
     const persistedSelection =
@@ -1306,16 +1315,41 @@ export const createPromptCollectionScreenController = ({
     viewportMetrics = nextViewportMetrics
   }
 
-  /** Persists actual virtual offsets, including clamping and explicit navigation results. */
+  /** Latest scroll offset not yet written to this tab's view. Writing every scroll step re-saved the whole tab
+      session per step, so, like Monaco view states, the offset is captured only when tab state is captured. */
+  let pendingScrollTopWrite: { mode: PromptCollectionScreenMode; offset: number } | null = null
+
+  /** Writes the pending offset to the tab view, which queues the tab session save. */
+  const flushPendingScrollTopWrite = (): void => {
+    const pending = pendingScrollTopWrite
+    if (!pending) return
+    pendingScrollTopWrite = null
+    setPromptCollectionScrollTopWithAutosave(tabView, screenCollectionId, pending.mode, pending.offset)
+  }
+
+  /** Registry key under which AppShell's tab-state capture flushes this controller's pending offset. */
+  const scrollTopSaverKey = `prompt-collection-scroll-top:${nextScrollTopSaverId++}`
+  registerMonacoViewStateSaver(scrollTopSaverKey, flushPendingScrollTopWrite)
+
+  // Side effect: write any pending offset and leave the capture registry when the screen unmounts.
+  $effect(() => () => {
+    unregisterMonacoViewStateSaver(scrollTopSaverKey)
+    flushPendingScrollTopWrite()
+  })
+
+  /** Records actual virtual offsets, including clamping and explicit navigation results, for the next capture. */
   const handleVirtualScrollTopChange = (nextScrollTop: number) => {
     scrollTopPx = nextScrollTop
     if (!workspaceId) return
-    setPromptCollectionScrollTopWithAutosave(tabView, screenCollectionId, screenMode, nextScrollTop)
+    // An offset recorded for another status mode belongs to that mode and is written before this one replaces it.
+    if (pendingScrollTopWrite && pendingScrollTopWrite.mode !== screenMode) flushPendingScrollTopWrite()
+    pendingScrollTopWrite = { mode: screenMode, offset: nextScrollTop }
   }
 
   /** Copies the visible offset to the destination before the header tab remounts the screen. */
   const preserveScrollForScreenMode = (nextMode: PromptCollectionScreenMode): void => {
     if (!workspaceId || nextMode === screenMode) return
+    flushPendingScrollTopWrite()
     setPromptCollectionScrollTopWithAutosave(
       tabView, screenCollectionId, nextMode, scrollApi?.getScrollTop() ?? scrollTopPx
     )

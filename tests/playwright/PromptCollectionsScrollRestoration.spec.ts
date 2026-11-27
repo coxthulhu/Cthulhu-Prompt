@@ -98,6 +98,8 @@ describe('Prompt collection status scroll restoration', () => {
       (await (mainWindow as Page).locator(HOST).evaluate((host) => host.clientHeight)))
     expect(reachableOffset).toBeLessThan(900)
     await expectScroll(testHelpers, reachableOffset)
+    // Leaving the collection captures its scroll offset, like editor view states.
+    await testHelpers.navigateToHomeScreen()
     await expect.poll(async () => Math.abs((await readOffsets(electronApp, 'Alpha')).backlog! - reachableOffset))
       .toBeLessThanOrEqual(2)
   })
@@ -124,6 +126,8 @@ describe('Prompt collection status scroll restoration', () => {
     await testHelpers.scrollVirtualWindowTo(HOST, 500)
     await mainWindow.getByTestId('sidebar-collection-overview-button').click()
     await expectScroll(testHelpers, 0)
+    // Leaving the collection captures its scroll offset, like editor view states.
+    await testHelpers.navigateToHomeScreen()
     await expect.poll(async () => (await readOffsets(electronApp, 'Alpha')).active).toBe(0)
   })
 

@@ -63,6 +63,10 @@ describe('Workspace tab sessions', () => {
     await openTasks(mainWindow)
     await expectOffset(mainWindow, 210)
     await testHelpers.scrollVirtualWindowTo(HOST, 1100)
+    // Leaving a tab captures its scroll offset, like editor view states, so the round trip saves 1100.
+    await tabs(mainWindow).nth(0).click()
+    await tabs(mainWindow).nth(2).click()
+    await expectOffset(mainWindow, 1100)
     await expect.poll(async () => Object.values((await readTabSession(electronApp, ID)).machine?.tabs ?? {}).map((tab) => tab.view.scrollTopByMode.active)).toEqual([210, 740, 1100])
     await reload(mainWindow)
     await expect(tabs(mainWindow)).toHaveText(['Tasks', 'Tasks', 'Tasks'])
@@ -128,6 +132,10 @@ describe('Workspace tab sessions', () => {
     await mainWindow.getByTestId('new-tab-button').click()
     await openTasks(mainWindow)
     await testHelpers.scrollVirtualWindowTo(HOST, 600)
+    // Leaving a tab captures its scroll offset, like editor view states, so the round trip saves 600.
+    await tabs(mainWindow).nth(0).click()
+    await tabs(mainWindow).nth(1).click()
+    await expectOffset(mainWindow, 600)
     await expect.poll(async () => {
       /** Wait for both tabs and the latest viewport, not an earlier partial autosave. */
       const saved = await readTabSession(electronApp, ID)
