@@ -180,28 +180,26 @@
     return JSON.stringify(viewState)
   }
 
-  /** Restores saved view state, and returns whether there was any to restore. */
   const tryRestoreEditorViewState = (
     targetEditor: monaco.editor.IStandaloneCodeEditor,
     viewStateJson: string | null | undefined
-  ): boolean => {
-    if (!viewStateJson) return false
+  ): void => {
+    if (!viewStateJson) return
 
     try {
       targetEditor.restoreViewState(JSON.parse(viewStateJson) as monaco.editor.ICodeEditorViewState)
     } catch {
       // Monaco tolerates stale or incompatible view state; ignore restoration failures.
     }
-    return true
   }
 
   const restoreEditorViewStateWithScrollSuppression = (
     targetEditor: monaco.editor.IStandaloneCodeEditor,
     viewStateJson: string | null | undefined
-  ): boolean => {
+  ) => {
     suppressCursorAutoScrollDuringRestore = true
     try {
-      return tryRestoreEditorViewState(targetEditor, viewStateJson)
+      tryRestoreEditorViewState(targetEditor, viewStateJson)
     } finally {
       // Side effect: ignore restore-driven cursor changes only during synchronous restoration.
       suppressCursorAutoScrollDuringRestore = false
@@ -366,6 +364,17 @@
       ? reportSelectionAnchor(editor, editor.getSelection())
       : null
     emitChange(nextValue, didResize, monacoHeightPx, selection)
+  }
+
+  // Folding hides or shows lines without editing text, so the editor follows its folded content height here, including
+  // when restoring view state re-applies saved folds.
+  const handleHiddenAreasChange = () => {
+    if (!editor) return
+    const nextHeightPx = measureContentHeightPx()
+    if (nextHeightPx === monacoHeightPx) return
+    layoutEditor(nextHeightPx)
+    // Editor setup reports its height itself once restoring view state finishes.
+    if (isEditorReady) emitChange(editor.getValue(), true, monacoHeightPx)
   }
 
   // Keep the virtual window centered on the primary cursor after Monaco reveals it.
@@ -541,14 +550,13 @@
       const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
       /** Monaco key subscription implements focus navigation from the document edges. */
       const keyDownDisposable = nextEditor.onKeyDown(handleBoundaryKeyDown)
+      const hiddenAreasDisposable = nextEditor.onDidChangeHiddenAreas(handleHiddenAreasChange)
 
       // Created at the measured width, so its wrapped content height is known and one layout applies it; each layout
-      // renders synchronously and forces a page layout.
+      // renders synchronously and forces a page layout. Restored folds resize the editor through handleHiddenAreasChange.
       monacoHeightPx = measureContentHeightPx()
       nextEditor.layout({ width: measuredWidthPx, height: monacoHeightPx })
-      if (restoreEditorViewStateWithScrollSuppression(nextEditor, initialViewStateJson)) {
-        layoutEditor()
-      }
+      restoreEditorViewStateWithScrollSuppression(nextEditor, initialViewStateJson)
       lastContainerWidthPx = containerWidthPx
       emitChange(nextEditor.getValue(), false, monacoHeightPx)
       onFindMatchReveal?.(revealFindMatch)
@@ -566,6 +574,7 @@
         selectionDisposable.dispose()
         scrollDisposable.dispose()
         keyDownDisposable.dispose()
+        hiddenAreasDisposable.dispose()
         suppressCursorAutoScrollDuringRestore = false
         if (viewStateCaptureKey) {
           unregisterMonacoViewStateSaver(viewStateCaptureKey)
