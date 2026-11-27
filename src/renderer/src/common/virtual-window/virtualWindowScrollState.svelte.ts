@@ -117,10 +117,22 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   const scrollShadowActive = $derived(resolvedScrollTopPx > 0)
 
   const OVERSCAN_PX = 400
+  /** Overscan in effect; zero until the window's first frame paints, so mounting renders only the visible rows. */
+  let overscanPx = $state(0)
+
+  // Side effect: add the overscan rows in the frame after the window's visible rows first paint.
+  $effect(() => {
+    let frameHandle = requestAnimationFrame(() => {
+      frameHandle = requestAnimationFrame(() => {
+        overscanPx = OVERSCAN_PX
+      })
+    })
+    return () => cancelAnimationFrame(frameHandle)
+  })
 
   // Overscan the viewport so rows above/below are rendered ahead of scroll.
-  const overscannedTopPx = $derived(Math.max(0, resolvedScrollTopPx - OVERSCAN_PX))
-  const overscannedBottomPx = $derived(resolvedScrollBottomPx + OVERSCAN_PX)
+  const overscannedTopPx = $derived(Math.max(0, resolvedScrollTopPx - overscanPx))
+  const overscannedBottomPx = $derived(resolvedScrollBottomPx + overscanPx)
 
   const visibleStartIndex = $derived(findIndexAtOffset(getRowStates(), overscannedTopPx))
   const visibleEndIndex = $derived.by(() => {

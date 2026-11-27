@@ -27,6 +27,10 @@ new Function('require', 'exports', executable)((id: string) => {
 }, exports)
 const createScrollState = exports.createVirtualWindowScrollState!
 
+// Node has no animation frames. These cases never advance frames, so the overscan added after the first paint stays off.
+vi.stubGlobal('requestAnimationFrame', () => 0)
+vi.stubGlobal('cancelAnimationFrame', () => {})
+
 type TestRow = { kind: 'row' }
 const buildRows = (leadingGrowth = 0, targetHeight = 80): VirtualRowState<TestRow>[] => {
   let offset = 0
