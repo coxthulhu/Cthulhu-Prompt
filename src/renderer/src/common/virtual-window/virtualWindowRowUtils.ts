@@ -22,6 +22,8 @@ export const computeAnchoredScrollTop = <TRow extends { kind: string }>(
   scrollTop: number,
   anchorOffsetPx: number
 ): number => {
+  // The same rows leave every anchor in place, so plain scrolling skips the full row comparison.
+  if (previousRows === nextRows) return scrollTop
   if (didRowsOnlyReorder(previousRows, nextRows)) return scrollTop
   // A top-anchored viewport stays pinned to the collection start when rows are inserted above it.
   if (scrollTop === 0 && anchorOffsetPx === 0) return 0

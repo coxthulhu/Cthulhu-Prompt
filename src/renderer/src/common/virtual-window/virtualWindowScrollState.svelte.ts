@@ -36,7 +36,9 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   const initialScrollTopPx = getInitialScrollTopPx()
   let scrollTopPx = $state(Math.max(0, initialScrollTopPx ?? 0))
   let scrollAnchorMode = $state<'top' | 'center'>('top')
-  let previousRowStates = $state<VirtualRowState<TRow>[]>([])
+  /** Rows of the last committed layout. Raw because it is only ever replaced: a deep proxy re-wraps each commit and
+      makes every scroll step's anchor check walk proxied rows. */
+  let previousRowStates = $state.raw<VirtualRowState<TRow>[]>([])
   let scrollbarRevealVersion = $state(0)
   let lastScrollTop = 0
   /** Preserves the visible prompt while its editor measures the new width. */
