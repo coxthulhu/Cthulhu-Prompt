@@ -53,7 +53,7 @@
     isDragging = false
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
-    document.documentElement.style.removeProperty('--disable-transitions')
+    delete document.documentElement.dataset.disableTransitions
   }
 
   /** Applies horizontal pointer travel to the width captured at drag start. */
@@ -75,7 +75,7 @@
     document.body.style.cursor = 'ew-resize'
     document.body.style.userSelect = 'none'
     // Disable transitions during drag to avoid jitter.
-    document.documentElement.style.setProperty('--disable-transitions', '0s')
+    document.documentElement.dataset.disableTransitions = ''
     dragSession = startPointerDrag({
       target: event.currentTarget as HTMLElement,
       event,

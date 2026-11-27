@@ -90,9 +90,10 @@
     cursor: text;
   }
 
-  /* Disable transitions during sidebar resize */
-  :root[style*='--disable-transitions'] * {
-    transition-duration: var(--disable-transitions) !important;
+  /* Disable transitions during sidebar resize. A data attribute, not a [style] selector: any [style] attribute
+     selector makes every inline style write restyle that element's whole subtree. */
+  :root[data-disable-transitions] * {
+    transition-duration: 0s !important;
   }
 
   /* Dark-themed scrollbar styles */

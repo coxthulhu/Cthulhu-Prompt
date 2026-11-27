@@ -127,7 +127,7 @@ describe('Pointer capture', () => {
         if (control === 'scrollbar') await expect(handle).not.toHaveClass(/active/)
         await expect(mainWindow.locator('body')).not.toHaveCSS('cursor', /resize/)
         expect(await mainWindow.evaluate(() => document.body.style.userSelect)).toBe('')
-        expect(await mainWindow.evaluate(() => document.documentElement.style.getPropertyValue('--disable-transitions'))).toBe('')
+        expect(await mainWindow.evaluate(() => document.documentElement.hasAttribute('data-disable-transitions'))).toBe(false)
         /** Completed geometry must remain stationary while the original button stays held. */
         const stoppedBox = (await handle.boundingBox())!
         await mainWindow.mouse.move(x + 90, y + 90)
