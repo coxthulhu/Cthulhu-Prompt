@@ -32,7 +32,6 @@ import {
   type PromptCollectionKind
 } from '@shared/domain/prompt-collection/PromptCollection'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
-import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
 import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
 import {
   getPromptNavigationContext,
@@ -312,7 +311,8 @@ export const createPromptCollectionScreenController = ({
   let promptCollectionLoadRequestId = $state(0)
   let isLoading = $state(true)
   let initialContentRevealRequestId = $state<number | null>(null)
-  const LOADING_OVERLAY_FADE_MS = uiAnimationDurationMs.standard
+  /** Hides the overlay as soon as the collection is ready, since a fade only delays the rows behind it. */
+  const LOADING_OVERLAY_FADE_MS = 0
   let shouldShowLoadingOverlay = $state(false)
   const loadingOverlay = createLoadingOverlayState({
     fadeMs: LOADING_OVERLAY_FADE_MS,

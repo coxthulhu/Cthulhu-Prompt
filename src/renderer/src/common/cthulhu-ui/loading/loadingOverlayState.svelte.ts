@@ -44,6 +44,12 @@ export const createLoadingOverlayState = ({
       return
     }
 
+    // A zero fade removes the overlay in the same update instead of after a timer task.
+    if (fadeMs <= 0) {
+      setPhase('hidden')
+      return
+    }
+
     setPhase('fading')
     hideTimeoutId = window.setTimeout(() => {
       setPhase('hidden')
